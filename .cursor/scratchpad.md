@@ -424,6 +424,14 @@ This version will be built using HTML, TypeScript, and the HTML Canvas API for r
 
 - **Task 23: (Optional) Add Simple Visual Polish** was skipped as per user request.
 
+- **Task 24: Save/Load Settings** completed. Created `src/settings.ts` with `loadSettings` and `saveSettings` using `localStorage`. Added `setAllPlayerControls` to `src/player.ts`. Integrated loading on startup and saving on player count/control changes in `src/main.ts`. Verified functionality via user testing.
+
+- **Task 25: Define New Powerup Types** completed. Added `GHOST_MODE`, `THICK_TRAIL`, `CLEAR_OWN_TRAIL`, `RANDOM_TELEPORT` to `PowerupType` in `src/powerup.ts`. Added corresponding entries to `POWERUP_CONSTANTS` (duration, color, symbol). Updated `drawPowerup` to use constants for color and symbol rendering.
+
+- **Task 26: Implement New Powerup Effects & Visuals** completed. Modified `src/player.ts`: `checkCollisions` handles `GHOST_MODE`, `drawTrail` handles `THICK_TRAIL`, `drawPlayer` adds visual indicators for `GHOST_MODE` and `THICK_TRAIL`. Modified `src/main.ts`: `applyPowerupEffect` handles instantaneous effects (`CLEAR_OWN_TRAIL`, `RANDOM_TELEPORT`) and adds timed effects (`GHOST_MODE`, `THICK_TRAIL`) to `activeEffects`.
+
+- **Task 27: Adjust Powerup Spawning/Balancing** completed. Added new powerup types to the random selection list in `spawnPowerup` in `src/main.ts`. Further balancing deferred pending playtesting.
+
 *(No new feedback yet)*
 
 ## Lessons

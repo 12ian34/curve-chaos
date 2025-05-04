@@ -453,8 +453,12 @@ function spawnPowerup(context: CanvasRenderingContext2D): void {
         'SLOW_OTHERS', 
         'THIN_TRAIL', 
         'INVINCIBLE', 
-        // 'CLEAR_SCREEN', 
-        'REVERSE_CONTROLS'
+        'REVERSE_CONTROLS',
+        // --- Include New Powerups ---
+        'GHOST_MODE',
+        'THICK_TRAIL',
+        'CLEAR_OWN_TRAIL',
+        'RANDOM_TELEPORT'
     ];
     const randomIndex = Math.floor(Math.random() * powerupTypes.length);
     const type = powerupTypes[randomIndex]!;
@@ -464,9 +468,9 @@ function spawnPowerup(context: CanvasRenderingContext2D): void {
         type,
         x: spawnX,
         y: spawnY,
-        radius: POWERUP_RADIUS,
+        radius: POWERUP_CONSTANTS.DEFAULT_RADIUS, // Use constant
         createdAt: performance.now(), // Use performance.now() consistent with requestAnimationFrame
-        duration: type === 'INVINCIBLE' || type === 'THIN_TRAIL' || type === 'REVERSE_CONTROLS' ? 5000 : undefined, // Example duration for timed ones
+        // duration: type === 'INVINCIBLE' || type === 'THIN_TRAIL' || type === 'REVERSE_CONTROLS' ? 5000 : undefined, // Example duration for timed ones
     };
 
     activePowerups.push(newPowerup);
@@ -513,6 +517,55 @@ function applyPowerupEffect(player: Player, powerup: Powerup, allPlayers: Player
                 }
             }
             // Note: The collecting player doesn't get the SLOW_OTHERS effect directly added to their map
+            break;
+        
+        // --- Handle New Powerup Effects ---
+        case 'GHOST_MODE':
+            duration = POWERUP_CONSTANTS.GHOST_MODE.DURATION_MS;
+            player.activeEffects[effectType] = now + duration;
+            break;
+
+        case 'THICK_TRAIL':
+            duration = POWERUP_CONSTANTS.THICK_TRAIL.DURATION_MS;
+            player.activeEffects[effectType] = now + duration;
+            break;
+
+        case 'CLEAR_OWN_TRAIL':
+            // Instantaneous: Clear the player's path array
+            console.log(` -> Clearing trail for Player ${player.id}. Old length: ${player.path.length}`);
+            player.path = [player.path[player.path.length - 1] || { x: player.x, y: player.y }]; // Keep only the last point (or current pos if path is empty)
+            console.log(` -> New trail length: ${player.path.length}`);
+            break;
+
+        case 'RANDOM_TELEPORT':
+            // Instantaneous: Move player to a new random safe spot
+            console.log(` -> Teleporting Player ${player.id}`);
+            const canvasWidth = ctx?.canvas.width ?? 800; // Need canvas dimensions
+            const canvasHeight = ctx?.canvas.height ?? 600;
+            const leaderboardWidth = 250; // Match leaderboard drawing
+            const padding = 15; // Match leaderboard drawing
+            const playableWidth = canvasWidth - leaderboardWidth - (2 * padding);
+            
+            let minX = SAFE_ZONE_BUFFER;
+            let maxX = playableWidth - SAFE_ZONE_BUFFER;
+            let minY = SAFE_ZONE_BUFFER;
+            let maxY = canvasHeight - SAFE_ZONE_BUFFER;
+
+            // Clamp if necessary (same logic as initializeGame)
+            if (minX >= maxX || minY >= maxY) {
+                minX = Math.min(minX, playableWidth / 2);
+                maxX = Math.max(maxX, playableWidth / 2);
+                minY = Math.min(minY, canvasHeight / 2);
+                maxY = Math.max(maxY, canvasHeight / 2);
+            }
+
+            const newX = Math.random() * (maxX - minX) + minX;
+            const newY = Math.random() * (maxY - minY) + minY;
+            console.log(`    -> Teleported from (${player.x.toFixed(1)}, ${player.y.toFixed(1)}) to (${newX.toFixed(1)}, ${newY.toFixed(1)})`);
+            player.x = newX;
+            player.y = newY;
+            // Optionally, reset the last path point to the new location to avoid a long line
+            player.path[player.path.length - 1] = { x: newX, y: newY };
             break;
         
         // Add cases for other powerups here if needed

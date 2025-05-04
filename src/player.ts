@@ -220,6 +220,12 @@ export function checkCollisions(
         return false; // No collision check needed
     }
 
+    // --- Ghost Mode Check ---
+    if (player.activeEffects.GHOST_MODE) {
+        // console.log(`Player ${player.id} is ghosting.`);
+        return false; // No collision check needed
+    }
+
     // --- Boundary Check ---
     if (player.x - player.radius < 0 || 
         player.x + player.radius > playableWidth || // Use playableWidth for right edge
@@ -263,30 +269,41 @@ export function drawPlayer(ctx: CanvasRenderingContext2D, player: Player): void 
     if (!player.isAlive) return;
 
     const originalAlpha = ctx.globalAlpha; // Store original alpha
+    const originalLineWidth = ctx.lineWidth; // Store original line width
 
     // --- Apply Visual Effects --- 
     let outerRadius = player.radius + 2; // Radius for effect indicator circle
     let effectColor: string | null = null;
+    let setAlpha = false; // Flag if alpha was explicitly set for an effect
 
     if (player.activeEffects.SPEED_BOOST) {
-        effectColor = 'rgba(255, 255, 0, 0.5)'; // Semi-transparent yellow
+        effectColor = POWERUP_CONSTANTS.SPEED_BOOST.COLOR;
     }
     if (player.activeEffects.INVINCIBLE || player.isMakingHole) { // Also show for hole invincibility
-        effectColor = 'rgba(255, 0, 255, 0.5)'; // Semi-transparent magenta
-        // Maybe pulse alpha for invincibility?
+        effectColor = POWERUP_CONSTANTS.INVINCIBLE.COLOR;
         ctx.globalAlpha = 0.6 + Math.sin(performance.now() / 100) * 0.2; // Simple pulse
+        setAlpha = true;
     }
     if (player.activeEffects.SLOW_OTHERS) {
-        effectColor = 'rgba(0, 255, 255, 0.5)'; // Semi-transparent cyan
+        effectColor = POWERUP_CONSTANTS.SLOW_OTHERS.COLOR;
     }
     if (player.activeEffects.REVERSE_CONTROLS) {
-        effectColor = 'rgba(128, 0, 128, 0.5)'; // Semi-transparent purple
-        // Maybe flash color?
+        effectColor = POWERUP_CONSTANTS.REVERSE_CONTROLS.COLOR;
         if (Math.floor(performance.now() / 150) % 2 === 0) {
              effectColor = 'rgba(255, 255, 255, 0.6)'; // Flash white
         }
     }
-    // Thin trail effect is visible via the trail itself
+    // --- New Effect Visuals ---
+    if (player.activeEffects.GHOST_MODE) {
+        effectColor = POWERUP_CONSTANTS.GHOST_MODE.COLOR;
+        ctx.globalAlpha = 0.4; // Make player semi-transparent
+        setAlpha = true;
+    }
+    if (player.activeEffects.THICK_TRAIL) {
+        // Visual effect is on the trail itself, but maybe a subtle indicator?
+        effectColor = POWERUP_CONSTANTS.THICK_TRAIL.COLOR; 
+    }
+    // Instantaneous effects don't have visuals here
 
     // --- Draw Effect Indicator (if any) ---
     if (effectColor) {
@@ -304,7 +321,10 @@ export function drawPlayer(ctx: CanvasRenderingContext2D, player: Player): void 
     ctx.fill();
     ctx.closePath();
 
-    ctx.globalAlpha = originalAlpha; // Restore original alpha
+    if (setAlpha) { // Restore alpha only if it was changed by an effect
+        ctx.globalAlpha = originalAlpha; 
+    }
+    ctx.lineWidth = originalLineWidth; // Restore line width just in case
 }
 
 // New function to draw the player's trail
@@ -317,6 +337,9 @@ export function drawTrail(ctx: CanvasRenderingContext2D, player: Player): void {
     if (player.activeEffects.THIN_TRAIL) {
         effectiveRadius *= POWERUP_CONSTANTS.THIN_TRAIL.TRAIL_RADIUS_MULTIPLIER;
         effectiveRadius = Math.max(1, effectiveRadius); 
+    }
+    if (player.activeEffects.THICK_TRAIL) { // Added check for Thick Trail
+        effectiveRadius *= POWERUP_CONSTANTS.THICK_TRAIL.TRAIL_RADIUS_MULTIPLIER;
     }
 
     ctx.lineWidth = effectiveRadius * 2; // Trail thickness based on effective radius
