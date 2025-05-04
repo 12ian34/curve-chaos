@@ -39,10 +39,16 @@ check .cursor/scratchpad.md for full planning and requirements doc, including fu
     *   Thin Trail (Self)
     *   Invincibility (Self)
     *   Reverse Controls (Self)
+    *   Ghost Mode (Self)
+    *   Thick Trail (Self)
+    *   Clear Own Trail (Self)
+    *   Random Teleport (Self)
 *   **Random Names:** Players are assigned random names from various lists (English, Norwegian, Swedish, German).
 *   **Configurable Controls:** Player controls can be re-bound via the main menu.
 *   **Scoring System:** Points awarded based on survival rank each round (3/2/1/0).
 *   **Session Play:** The game continues over multiple rounds until one player reaches 30 points with at least a 2-point lead.
+*   **Pause/Resume:** The game can be paused and resumed using the Space bar.
+*   **Randomized Starts:** Players begin each round at random positions.
 *   **Responsive:** Uses the full browser window.
 *   **Leaderboard:** Displays player names and scores persistently.
 

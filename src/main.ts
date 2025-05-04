@@ -12,7 +12,7 @@ const SAFE_ZONE_BUFFER = 2 * MIN_TURN_RADIUS; // Approx 114.6 pixels
 console.log('curve chaos - loading...');
 
 // --- Game States ---
-type GameState = 'WaitingToStart' | 'Running' | 'GameOver' | 'SessionOver' | 'Paused';
+type GameState = 'WaitingToStart' | 'Running' | 'GameOver' | 'SessionOver' | 'Paused' | 'ReadyToStartRound'; // Added ReadyToStartRound
 type GameMode = 'Classic' | 'Arcade' | null; // Allow null when no mode is selected
 
 const canvas = document.getElementById('gameCanvas') as HTMLCanvasElement | null;
@@ -61,6 +61,7 @@ let waitingForKeyBinding: { playerId: number; direction: 'left' | 'right' } | nu
 let selectedPlayerCount = initialSettings.playerCount; // Use loaded player count
 let lastScores: { [playerId: number]: number } = {}; // Store scores between rounds
 let playerNames: { [id: number]: string } = {}; // Store assigned names for the session
+let confirmingExitToMenu: boolean = false; // Flag for exit confirmation
 
 // --- Mode Selection Buttons ---
 interface Button {
@@ -253,8 +254,8 @@ function initializeGame(gameCanvas: HTMLCanvasElement, playerCount: number, prev
     eliminationOrder = [];
 
     console.log('Starting game with mode:', selectedGameMode);
-    gameState = 'Running';
-    console.log('Game state set to: Running');
+    // gameState = 'Running'; // State change is now handled by handleKeyDown
+    // console.log('Game state set to: Running');
     return newPlayers;
 }
 
@@ -272,9 +273,9 @@ function handleKeyDown(event: KeyboardEvent) {
             console.log('Key binding cancelled.');
             waitingForKeyBinding = null;
         } else {
-            // --- Prevent binding Space or Enter ---
-            if (key === ' ' || key === 'spacebar' || key === 'enter') {
-                console.log('Cannot bind Space or Enter key.');
+            // --- Prevent binding Space, Enter, or Escape --- 
+            if (key === ' ' || key === 'spacebar' || key === 'enter' || key === 'escape') {
+                console.log('Cannot bind Space, Enter, or Escape key.');
                 // Keep waiting for a valid key, maybe add UI feedback later
             } else if (key.length === 1 || key.startsWith('arrow') || key.startsWith('numpad')) {
                 const { playerId, direction } = waitingForKeyBinding;
@@ -295,13 +296,14 @@ function handleKeyDown(event: KeyboardEvent) {
         return; // Stop further processing
     }
 
-    // --- Handle Space Bar (Start/Pause/Unpause) ---
+    // --- Handle Space Bar (Start/Pause/Unpause/Next Round) ---
     if (key === ' ' || key === 'spacebar') { // Handle both spacebar variations
         if (gameState === 'WaitingToStart' && selectedGameMode && !waitingForKeyBinding) {
             console.log('Space pressed, starting game with mode:', selectedGameMode);
             if (canvas && ctx) {
                 lastScores = {}; // Reset scores when starting fresh from menu
                 players = initializeGame(canvas, selectedPlayerCount, lastScores);
+                gameState = 'Running'; // Start running immediately from main menu
             } else {
                 console.error('Cannot start game, canvas or context missing!');
             }
@@ -343,32 +345,90 @@ function handleKeyDown(event: KeyboardEvent) {
             }
             // No need to redraw immediately, gameLoop will take over
             return;
+        } else if (gameState === 'GameOver') {
+            // --- First Space after round ends: Reset and show ready state --- 
+            console.log('Space pressed in GameOver, preparing next round...');
+            if (canvas && ctx) {
+                // Initialize resets players, scores are preserved via lastScores
+                players = initializeGame(canvas, selectedPlayerCount, lastScores);
+                gameState = 'ReadyToStartRound'; 
+                console.log('State set to ReadyToStartRound');
+                // Draw the ready state immediately
+                drawGameState(ctx, players);
+            } else {
+                console.error('Cannot prepare next round, canvas or context missing!');
+            }
+            return;
+        } else if (gameState === 'ReadyToStartRound') {
+            // --- Second Space: Start the round --- 
+            console.log('Space pressed in ReadyToStartRound, starting round...');
+            gameState = 'Running';
+            console.log('State set to Running');
+            // gameLoop will handle drawing the running game
+            return;
         }
     }
 
-    // --- Handle Enter Key (Restart Round / Return to Menu) ---
+    // --- Handle Enter Key (Return to Menu from GameOver/SessionOver) ---
     if (key === 'enter') {
-        if (gameState === 'GameOver') {
-            console.log('Enter pressed, restarting round...');
-            if (canvas && ctx) {
-                // Pass the lastScores map to preserve scores across rounds
-                players = initializeGame(canvas, selectedPlayerCount, lastScores);
+        if (gameState === 'GameOver' || gameState === 'SessionOver') { // Combined condition
+            if (!confirmingExitToMenu) {
+                // First Enter press: Activate confirmation
+                console.log('Enter pressed, requesting confirmation to exit...');
+                confirmingExitToMenu = true;
+                // Redraw to show confirmation prompt
+                if (ctx) drawGameState(ctx, players);
             } else {
-                console.error('Cannot restart game, canvas or context missing!');
+                // Second Enter press: Confirm exit
+                console.log('Enter pressed again, confirming exit to main menu...');
+                // Reset to initial state
+                gameState = 'WaitingToStart';
+                lastScores = {}; // Clear scores completely
+                players = []; // Clear players array
+                assignInitialPlayerNames(selectedPlayerCount); // Re-assign names for the new session
+                confirmingExitToMenu = false; // Reset flag
+                // Redraw the WaitingToStart screen
+                if (ctx) drawGameState(ctx, players);
             }
-            return;
-        } else if (gameState === 'SessionOver') {
-            console.log('Enter pressed, returning to main menu...');
-            // Reset to initial state
-            gameState = 'WaitingToStart';
-            lastScores = {}; // Clear scores completely
-            players = []; // Clear players array
-            assignInitialPlayerNames(selectedPlayerCount); // Re-assign names for the new session
-            // selectedGameMode = null; // Optionally deselect mode
-            // Redraw the WaitingToStart screen
-            if (ctx) drawGameState(ctx, players);
-            return;
+            return; // Prevent further key processing for Enter in these states
         }
+        // Note: Enter no longer starts the next round from GameOver
+    }
+
+    // --- Handle Escape Key (Return to Menu from GameOver/SessionOver) ---
+    if (key === 'escape') {
+        if (gameState === 'GameOver' || gameState === 'SessionOver') { // Combined condition
+            if (!confirmingExitToMenu) {
+                // First Escape press: Activate confirmation
+                console.log('Escape pressed, requesting confirmation to exit...');
+                confirmingExitToMenu = true;
+                // Redraw to show confirmation prompt
+                if (ctx) drawGameState(ctx, players);
+            } else {
+                // Second Escape press: Confirm exit
+                console.log('Escape pressed again, confirming exit to main menu...');
+                // Reset to initial state
+                gameState = 'WaitingToStart';
+                lastScores = {}; // Clear scores completely
+                players = []; // Clear players array
+                assignInitialPlayerNames(selectedPlayerCount); // Re-assign names for the new session
+                confirmingExitToMenu = false; // Reset flag
+                // Redraw the WaitingToStart screen
+                if (ctx) drawGameState(ctx, players);
+            }
+            return; // Prevent further key processing for Escape in these states
+        }
+        // Note: Escape also cancels key binding (handled above)
+    }
+
+    // --- Cancel confirmation on any other key press --- 
+    if (confirmingExitToMenu && key !== 'escape' && (gameState === 'GameOver' || gameState === 'SessionOver')) {
+        console.log('Different key pressed, cancelling exit confirmation.');
+        confirmingExitToMenu = false;
+        // Redraw to show original prompt
+        if (ctx) drawGameState(ctx, players);
+        // Allow the other key press to be processed if needed (e.g., Space to start next round)
+        // return; // No return here unless we want to block other keys during confirm
     }
 
     // --- Normal Key State Update (for turning) ---
@@ -772,17 +832,23 @@ function gameLoop(timestamp: number, context: CanvasRenderingContext2D, currentP
             if (highestScore >= WIN_SCORE && (scores.length < 2 || highestScore >= secondHighestScore + WIN_DIFFERENCE)) {
                 gameState = 'SessionOver';
                 console.log(`Session Over! Player with score ${highestScore} wins the game! (Scores: ${scores.join(', ')})`);
+                 // Draw the final frame *before* the Session Over screen
+                 if (ctx) drawRunningGameScreen(ctx, players);
                  // Draw Session Over screen immediately after state change
                  if (ctx) drawGameState(ctx, players);
             } else {
                 gameState = 'GameOver';
                 console.log('Round Over! Starting next round setup. (Scores: ', lastScores, ')');
+                 // Draw the final frame *before* the Game Over screen
+                 if (ctx) drawRunningGameScreen(ctx, players);
                  // Draw Game Over screen immediately after state change
                  if (ctx) drawGameState(ctx, players);
             }
         }
 
-        // --- Draw Running Game Screen (Only if still Running) --- 
+        // --- Draw Running Game Screen (Only if still Running) ---
+        // Moved the drawing calls for GameOver/SessionOver above to ensure the final frame is shown under the overlay.
+        // This block now only handles the normal running state drawing.
         if (gameState === 'Running') { // Add this check
             drawRunningGameScreen(context, currentPlayers);
         }
@@ -988,18 +1054,21 @@ function drawGameState(context: CanvasRenderingContext2D, currentPlayers: Player
     context.textBaseline = 'middle'; 
 
 
-    // Clear canvas before drawing states (except for Running/Paused which draw their own background)
-    if (gameState !== 'Running' && gameState !== 'Paused') {
-        context.clearRect(0, 0, displayWidth * dpi, displayHeight * dpi);
-        // Optionally draw the default background for non-running states?
-        const bgGradient = context.createLinearGradient(0, 0, 0, displayHeight * dpi); // Scale gradient height
+    // REMOVED: Clear canvas before drawing states (except for Running/Paused which draw their own background)
+    // if (gameState !== 'Running' && gameState !== 'Paused') { ... clearRect and fillRect logic removed ... }
+
+    if (gameState === 'WaitingToStart') {
+        // --- Need to draw the background explicitly for the main menu --- 
+        // const displayWidth = context.canvas.clientWidth; // Already defined above
+        // const displayHeight = context.canvas.clientHeight; // Already defined above
+        context.clearRect(0, 0, displayWidth * dpi, displayHeight * dpi); // Clear first
+        const bgGradient = context.createLinearGradient(0, 0, 0, displayHeight * dpi); 
         bgGradient.addColorStop(0, '#1a0a2a');
         bgGradient.addColorStop(1, '#0a0a0a');
         context.fillStyle = bgGradient;
-        context.fillRect(0, 0, displayWidth * dpi, displayHeight * dpi); // Scale fill rect
-    }
-
-    if (gameState === 'WaitingToStart') {
+        context.fillRect(0, 0, displayWidth * dpi, displayHeight * dpi); 
+        // --- End Background Drawing for Main Menu ---
+        
         context.fillStyle = '#eee'; // Brighter text
         // --- Scale Font Size --- 
         context.font = `bold ${48 * dpi}px ${defaultFont}`; 
@@ -1388,7 +1457,7 @@ function drawGameState(context: CanvasRenderingContext2D, currentPlayers: Player
         const boxHeight_scaled = boxHeight_css * dpi;
         const boxRadius_scaled = 20 * dpi;
         const scaledCenterX_scaled = scaledCenterX_css * dpi;
-        const scaledCenterY_scaled = scaledCenterY_css * dpi;
+        // const scaledCenterY_scaled = scaledCenterY_css * dpi; // No longer used in this block
 
         // Draw background square with gradient (consistent dark theme)
         const previousAlpha = context.globalAlpha;
@@ -1416,34 +1485,46 @@ function drawGameState(context: CanvasRenderingContext2D, currentPlayers: Player
         context.textBaseline = 'middle';
         context.textAlign = 'center';
 
-        // Draw Game Over text
-         // --- Scale Font Size & Position --- 
-        context.font = `bold ${44 * dpi}px ${defaultFont}`; 
-        context.fillText('Konec Hry!', scaledCenterX_scaled, scaledCenterY_scaled - 50 * dpi); // Scale offset
+        // --- Redefined Layout within the box --- 
+        // const topPadding = 20 * dpi; // No longer used
+        const konecHryY = boxY_scaled + 45 * dpi; 
+        const playAgainY = boxY_scaled + 80 * dpi;
+        const winnerY = boxY_scaled + 120 * dpi;
+        const exitPromptY = boxY_scaled + boxHeight_scaled - 25 * dpi; // Keep near bottom
 
-        // Draw Play Again text
-         // --- Scale Font Size & Position --- 
+        // Draw Game Over text ("Konec Hry!")
+        context.font = `bold 44 * dpi}px ${defaultFont}`; 
+        context.fillStyle = 'white'; 
+        context.fillText('Konec Hry!', scaledCenterX_scaled, konecHryY);
+
+        // Draw Play Again text ("Press Space...")
         context.font = ` ${22 * dpi}px ${defaultFont}`; 
-        context.fillText('Press Enter to Play Again', scaledCenterX_scaled, scaledCenterY_scaled); 
+        context.fillStyle = '#ddd';
+        context.fillText('Press Space to Play Again', scaledCenterX_scaled, playAgainY); 
         
         // Draw Winner text (or Draw)
-         // --- Scale Font Size & Position --- 
         context.font = `bold ${30 * dpi}px ${defaultFont}`; 
         if (winner) {
-            context.fillStyle = 'white'; 
-            context.fillText(`${winner.name} Wins!`, scaledCenterX_scaled, scaledCenterY_scaled + 50 * dpi); // Scale offset
+            context.fillStyle = winner.color; // Use winner color
+            context.fillText(`${winner.name} Wins!`, scaledCenterX_scaled, winnerY);
         } else if (currentPlayers && currentPlayers.length > 0) { 
-             context.fillStyle = 'white';
-             context.fillText('Draw!', scaledCenterX_scaled, scaledCenterY_scaled + 50 * dpi); // Scale offset
+            context.fillStyle = 'white'; // White for draw
+            context.fillText('Draw!', scaledCenterX_scaled, winnerY);
         }
 
-        // Draw Play Again text (different prompt)
-         // --- Scale Font Size & Position --- 
+        // Draw Exit / Confirmation prompt (Using Escape)
         context.font = ` ${20 * dpi}px ${defaultFont}`; 
-        context.fillStyle = '#ddd';
-        context.fillText('Press Enter for Main Menu', scaledCenterX_scaled, boxY_scaled + boxHeight_scaled - 25 * dpi); // Scale offset
+        context.fillStyle = '#ccc'; // Slightly dimmer color for this prompt
+        const exitPrompt = confirmingExitToMenu 
+            ? 'Press Esc again to Confirm Exit' 
+            : 'Press Esc for Main Menu';
+        context.fillText(exitPrompt, scaledCenterX_scaled, exitPromptY);
 
     } else if (gameState === 'SessionOver') {
+        // --- Background is drawn by drawRunningGameScreen before this state --- 
+        // const displayWidth = context.canvas.clientWidth; // Already defined above
+        // const displayHeight = context.canvas.clientHeight; // Already defined above
+
         // --- Session Over Screen (Game End) --- 
         const scores = currentPlayers ? Object.entries(lastScores).sort(([, scoreA], [, scoreB]) => scoreB - scoreA) : [];
         const winnerId = scores.length > 0 ? parseInt(scores[0]![0]) : null;
@@ -1505,17 +1586,44 @@ function drawGameState(context: CanvasRenderingContext2D, currentPlayers: Player
         context.font = `bold ${32 * dpi}px ${defaultFont}`; 
         if (winner) {
             context.fillStyle = 'white'; 
-            context.fillText(`${winner.name} Wins the Game!`, scaledCenterX_scaled, boxY_scaled + 85 * dpi); // Scale offset
+            context.fillText(`${winner.name} Wins the Game!`, scaledCenterX_scaled, boxY_scaled + 95 * dpi); // Adjusted offset
         } else {
              context.fillStyle = 'white';
-             context.fillText('Session Complete!', scaledCenterX_scaled, boxY_scaled + 85 * dpi); // Scale offset
+             context.fillText('Session Complete!', scaledCenterX_scaled, boxY_scaled + 95 * dpi); // Adjusted offset
         }
 
-         // Draw Play Again text (different prompt)
+        // Draw Exit / Confirmation prompt (Using Escape)
          // --- Scale Font Size & Position --- 
         context.font = ` ${20 * dpi}px ${defaultFont}`; 
         context.fillStyle = '#ddd';
-        context.fillText('Press Enter for Main Menu', scaledCenterX_scaled, boxY_scaled + boxHeight_scaled - 25 * dpi); // Scale offset
+        const exitPromptSession = confirmingExitToMenu 
+            ? 'Press Esc again to Confirm Exit' 
+            : 'Press Esc for Main Menu';
+        context.fillText(exitPromptSession, scaledCenterX_scaled, boxY_scaled + boxHeight_scaled - 25 * dpi); // Scale offset
+    
+    } else if (gameState === 'ReadyToStartRound') {
+        // --- Draw the initialized game screen (players ready) --- 
+        drawRunningGameScreen(context, currentPlayers);
+
+        // --- Draw "Press Space to Start" overlay --- 
+        const displayWidth = context.canvas.clientWidth; // CSS width
+        const displayHeight = context.canvas.clientHeight; // CSS height
+        const scaledCenterX_scaled = displayWidth / 2 * dpi;
+        const scaledCenterY_scaled = displayHeight / 2 * dpi;
+        const defaultFont = "'Poppins', sans-serif";
+
+        // Semi-transparent overlay (optional, can make text clearer)
+        // context.fillStyle = 'rgba(0, 0, 0, 0.4)';
+        // context.fillRect(0, 0, displayWidth * dpi, displayHeight * dpi);
+
+        // Text styling
+        context.fillStyle = 'white';
+        context.font = `bold ${48 * dpi}px ${defaultFont}`;
+        context.textAlign = 'center';
+        context.textBaseline = 'middle';
+
+        // Draw the prompt
+        context.fillText('Press Space to Start', scaledCenterX_scaled, scaledCenterY_scaled); // Centered
     }
 
     // Reset baseline and fillStyle after drawing state text
