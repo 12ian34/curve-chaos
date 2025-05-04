@@ -71,9 +71,20 @@ export function setPlayerControl(playerId: number, direction: 'left' | 'right', 
 // Function to set all controls at once (e.g., from loaded settings)
 // Expects an array where index 0 is for player 1, index 1 for player 2, etc.
 export function setAllPlayerControls(controlsArray: PlayerControls[]): void {
+    // Define default controls here for easy reference
+    const defaultControls: { [id: number]: PlayerControls } = {
+        1: { left: 'arrowleft', right: 'arrowright' },
+        2: { left: 'a', right: 'd' },
+        3: { left: 'j', right: 'l' },
+        4: { left: 'numpad4', right: 'numpad6' },
+    };
+    const MAX_PLAYERS = 4; // Define the maximum supported players
     const newControls: { [id: number]: PlayerControls } = {};
+
+    // Load from the array first
     for (let i = 0; i < controlsArray.length; i++) {
         const playerId = i + 1;
+        if (playerId > MAX_PLAYERS) continue; // Ignore extra saved controls if any
         const control = controlsArray[i];
         if (control && typeof control.left === 'string' && typeof control.right === 'string') {
              newControls[playerId] = {
@@ -81,11 +92,20 @@ export function setAllPlayerControls(controlsArray: PlayerControls[]): void {
                 right: control.right.toLowerCase()
             };
         } else {
-             console.warn(`Invalid control data provided for index ${i} (Player ${playerId})`);
-             // Optionally fall back to existing defaults if needed?
-             // For now, we just skip invalid entries.
+             console.warn(`Invalid control data provided for index ${i} (Player ${playerId}), using defaults.`);
+             // Use default if loaded data is invalid
+             newControls[playerId] = defaultControls[playerId] || { left: 'error', right: 'error' };
         }
     }
+
+    // Ensure defaults exist for any missing players up to MAX_PLAYERS
+    for (let playerId = 1; playerId <= MAX_PLAYERS; playerId++) {
+        if (!newControls[playerId]) {
+            console.log(`No saved controls for Player ${playerId}, applying defaults.`);
+            newControls[playerId] = defaultControls[playerId] || { left: 'error', right: 'error' };
+        }
+    }
+
     playerControls = newControls; // Replace the entire map
     console.log('Set all player controls:', playerControls);
 }
