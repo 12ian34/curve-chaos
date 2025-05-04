@@ -1,0 +1,26 @@
+html, body {
+    height: 100%;
+    margin: 0;
+    padding: 0;
+    overflow: hidden; /* Prevent scrollbars */
+    background-color: #1a1a1a; /* Slightly darker background */
+}
+
+body {
+    display: flex; /* Use flex to center canvas */
+    align-items: center;
+    justify-content: center;
+    /* height: 100vh; // Replaced by html, body height 100% */
+    font-family: sans-serif;
+    color: #eee;
+}
+
+/* Remove h1 style as it's commented out */
+/* h1 { ... } */
+
+canvas {
+    display: block; /* Prevent extra space below canvas */
+    border: none; /* Remove border for seamless look */
+    background-color: #000000; /* Black canvas background */
+    /* width/height will be set by JS */
+} 
