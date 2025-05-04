@@ -8,7 +8,7 @@ import { Powerup, PowerupType, drawPowerup, POWERUP_CONSTANTS } from './powerup'
 const MIN_TURN_RADIUS = 3 / (Math.PI / 60); // Approx 57.3 pixels
 const SAFE_ZONE_BUFFER = 2 * MIN_TURN_RADIUS; // Approx 114.6 pixels
 
-console.log('Achtung, die Kurve! - Loading...');
+console.log('curve chaos - loading...');
 
 // --- Game States ---
 type GameState = 'WaitingToStart' | 'Running' | 'GameOver' | 'SessionOver';
@@ -503,7 +503,6 @@ function applyPowerupEffect(player: Player, powerup: Powerup, allPlayers: Player
 let lastTimestamp = 0;
 
 function gameLoop(timestamp: number, context: CanvasRenderingContext2D, currentPlayers: Player[] | null) {
-    const _deltaTime = timestamp - lastTimestamp;
     lastTimestamp = timestamp;
 
     // Calculate playable width for use in collision checks

@@ -1,4 +1,4 @@
-# Achtung, die Kurve! - Local Multiplayer Game
+# curve chaos
 
 ## Background and Motivation
 
