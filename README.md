@@ -1,4 +1,4 @@
-# Curve Chaos (Achtung, die Kurve! Clone)
+# curve chaos
 
 A local multiplayer game inspired by the classic "Achtung, die Kurve!" built with TypeScript and HTML Canvas.
 
