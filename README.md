@@ -2,13 +2,11 @@
 
 [![Netlify Status](https://api.netlify.com/api/v1/badges/0dd106cb-b1f2-4d87-b9ce-78225e56dbeb/deploy-status)](https://app.netlify.com/sites/curvechaos/deploys)
 
-A local multiplayer game inspired by the classic "Achtung, die Kurve!" built with TypeScript and HTML Canvas.
+multiplayer game inspired by "Achtung, die Kurve!"
 
-## Deployment
+[https://curvechaos.netlify.app](https://curvechaos.netlify.app)
 
-🚀 **Live Site:** [https://curvechaos.netlify.app](https://curvechaos.netlify.app)
-
-## Features
+## features
 
 *   **Multiplayer:** Supports 1-4 local players.
 *   **Classic Mode:** Standard gameplay - avoid walls and trails.
@@ -25,7 +23,21 @@ A local multiplayer game inspired by the classic "Achtung, die Kurve!" built wit
 *   **Responsive:** Uses the full browser window.
 *   **Leaderboard:** Displays player names and scores persistently.
 
-## How to Play
+## todo
+
+- more powerups
+- online multiplayer
+- simplify ui
+
+## stack
+
+- typescript
+- vite
+- html canvas
+- css
+- netlify
+
+## developers
 
 1.  **Clone the repository:**
     ```bash
@@ -53,18 +65,3 @@ A local multiplayer game inspired by the classic "Achtung, die Kurve!" built wit
     *   In Arcade mode, collect power-ups for temporary advantages or disadvantages.
 7.  **Winning:** The first player to reach 30 points with a lead of at least 2 points wins the session.
 
-## Controls (Defaults)
-
-*   **Player 1:** Left Arrow / Right Arrow
-*   **Player 2:** A / D
-*   **Player 3:** J / L
-*   **Player 4:** Numpad 4 / Numpad 6
-
-*(Controls can be changed in the main menu before starting)*
-
-## Development
-
-*   Built with TypeScript and Vite.
-*   Uses HTML Canvas for rendering.
-*   Styling via plain CSS.
-*   Includes basic power-up system. 
