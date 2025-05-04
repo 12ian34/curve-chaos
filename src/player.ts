@@ -68,6 +68,28 @@ export function setPlayerControl(playerId: number, direction: 'left' | 'right', 
     }
 }
 
+// Function to set all controls at once (e.g., from loaded settings)
+// Expects an array where index 0 is for player 1, index 1 for player 2, etc.
+export function setAllPlayerControls(controlsArray: PlayerControls[]): void {
+    const newControls: { [id: number]: PlayerControls } = {};
+    for (let i = 0; i < controlsArray.length; i++) {
+        const playerId = i + 1;
+        const control = controlsArray[i];
+        if (control && typeof control.left === 'string' && typeof control.right === 'string') {
+             newControls[playerId] = {
+                left: control.left.toLowerCase(),
+                right: control.right.toLowerCase()
+            };
+        } else {
+             console.warn(`Invalid control data provided for index ${i} (Player ${playerId})`);
+             // Optionally fall back to existing defaults if needed?
+             // For now, we just skip invalid entries.
+        }
+    }
+    playerControls = newControls; // Replace the entire map
+    console.log('Set all player controls:', playerControls);
+}
+
 export function createPlayer(id: number, name: string, x: number, y: number, angle: number, color: string, initialScore: number = 0): Player {
     return {
         id,

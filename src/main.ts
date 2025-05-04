@@ -1,5 +1,6 @@
-import { createPlayer, updatePlayer, drawPlayer, Player, drawTrail, checkCollisions, getPlayerControls, setPlayerControl, NAME_LISTS } from './player';
+import { createPlayer, updatePlayer, drawPlayer, Player, drawTrail, checkCollisions, getPlayerControls, setPlayerControl, setAllPlayerControls, NAME_LISTS } from './player';
 import { Powerup, PowerupType, drawPowerup, POWERUP_CONSTANTS } from './powerup'; // Import powerup stuff
+import { loadSettings, saveSettings } from './settings'; // Import settings functions
 
 // --- Constants for Random Start ---
 // Minimum turn radius = max_speed / turn_speed_radians_per_frame
@@ -36,6 +37,11 @@ if (!ctx) {
 
 console.log('Canvas context acquired. Initializing game...');
 
+// --- Load Initial Settings ---
+const initialSettings = loadSettings();
+console.log('Loaded initial settings:', initialSettings);
+setAllPlayerControls(initialSettings.controls); // Apply loaded controls
+
 // --- Game State Variables ---
 // let player1: Player | null = null; // Replaced by players array
 let players: Player[] = []; // Array to hold all player objects
@@ -50,7 +56,7 @@ let eliminationOrder: number[] = []; // Array to store player IDs in elimination
 
 // State for key binding process
 let waitingForKeyBinding: { playerId: number; direction: 'left' | 'right' } | null = null;
-let selectedPlayerCount = 4; // Default to 4 players
+let selectedPlayerCount = initialSettings.playerCount; // Use loaded player count
 let lastScores: { [playerId: number]: number } = {}; // Store scores between rounds
 let playerNames: { [id: number]: string } = {}; // Store assigned names for the session
 
@@ -261,8 +267,14 @@ function handleKeyDown(event: KeyboardEvent) {
             // Basic validation: Avoid modifier keys or very short keys? (Can enhance later)
             // For now, accept most printable keys. Consider a blacklist if needed.
             if (key.length === 1 || key.startsWith('arrow') || key.startsWith('numpad')) {
-                setPlayerControl(waitingForKeyBinding.playerId, waitingForKeyBinding.direction, key);
+                const { playerId, direction } = waitingForKeyBinding;
+                setPlayerControl(playerId, direction, key);
                 waitingForKeyBinding = null;
+                // --- Save settings after control change ---
+                const currentControlsMap = getPlayerControls();
+                const currentControlsArray = Object.values(currentControlsMap); // Convert map to array
+                saveSettings({ playerCount: selectedPlayerCount, controls: currentControlsArray });
+                console.log('Settings saved after control change.');
             } else {
                 console.log('Ignoring unsuitable key for binding:', key);
                 // Optionally provide feedback to user? For now, just ignore.
@@ -387,14 +399,24 @@ function handleMouseClick(event: MouseEvent) {
                 mouseY >= button.y &&
                 mouseY <= button.y + button.height
             ) {
+                let countChanged = false;
                 if (button.action === 'increase' && selectedPlayerCount < 4) {
                     selectedPlayerCount++;
+                    countChanged = true;
                     console.log('Increased player count to:', selectedPlayerCount);
                     assignInitialPlayerNames(selectedPlayerCount); // Re-assign names
                 } else if (button.action === 'decrease' && selectedPlayerCount > 1) {
                     selectedPlayerCount--;
+                    countChanged = true;
                     console.log('Decreased player count to:', selectedPlayerCount);
                     assignInitialPlayerNames(selectedPlayerCount); // Re-assign names
+                }
+                if (countChanged) {
+                     // --- Save settings after player count change ---
+                    const currentControlsMap = getPlayerControls();
+                    const currentControlsArray = Object.values(currentControlsMap); // Convert map to array
+                    saveSettings({ playerCount: selectedPlayerCount, controls: currentControlsArray });
+                    console.log('Settings saved after player count change.');
                 }
                 buttonClicked = true;
                 break;
@@ -500,11 +522,7 @@ function applyPowerupEffect(player: Player, powerup: Powerup, allPlayers: Player
 }
 
 // --- Game Loop ---
-let lastTimestamp = 0;
-
 function gameLoop(timestamp: number, context: CanvasRenderingContext2D, currentPlayers: Player[] | null) {
-    lastTimestamp = timestamp;
-
     // Calculate playable width for use in collision checks
     const canvasWidth = context.canvas.width;
     const leaderboardWidth = 250; // UPDATED WIDTH
@@ -1147,7 +1165,7 @@ function drawGameState(context: CanvasRenderingContext2D, currentPlayers: Player
 
 // --- Start Game ---
 resizeCanvas(); // Initial sizing of the canvas
-assignInitialPlayerNames(selectedPlayerCount); // Assign initial names on load
+assignInitialPlayerNames(selectedPlayerCount); // Assign initial names based on loaded/default count
 console.log('Game ready. Initial state:', gameState);
 console.log('Starting game loop...');
 requestAnimationFrame((ts) => gameLoop(ts, ctx, players)); 

@@ -6,29 +6,66 @@ export type PowerupType =
     | 'SLOW_OTHERS'       // Decrease speed of opponents
     | 'THIN_TRAIL'        // Make own trail temporarily thinner
     | 'INVINCIBLE'        // Pass through walls and trails temporarily (similar to hole invincibility)
-    // | 'CLEAR_SCREEN'      // Instantly clear all trails (Removed for now)
-    | 'REVERSE_CONTROLS'; // Reverse own controls temporarily (Changed from opponents to self)
+    | 'REVERSE_CONTROLS' // Reverse own controls temporarily (Changed from opponents to self)
+    // --- New Powerups ---
+    | 'GHOST_MODE'        // Pass through walls & other trails (timed)
+    | 'THICK_TRAIL'       // Increase own trail width (timed)
+    | 'CLEAR_OWN_TRAIL'   // Instantly remove own trail (instantaneous)
+    | 'RANDOM_TELEPORT';  // Instantly move to random safe spot (instantaneous)
 
 // --- Powerup Constants ---
 export const POWERUP_CONSTANTS = {
     SPEED_BOOST: {
         DURATION_MS: 5000, // 5 seconds
         SPEED_MULTIPLIER: 1.5, // 50% faster
+        COLOR: '#FFD700', // Gold
+        SYMBOL: '⚡',
     },
     SLOW_OTHERS: {
         DURATION_MS: 5000, // 5 seconds
         SPEED_MULTIPLIER: 0.7, // 30% slower
+        COLOR: '#00FFFF', // Cyan
+        SYMBOL: '🐌',
     },
     THIN_TRAIL: {
         DURATION_MS: 10000, // 10 seconds
         TRAIL_RADIUS_MULTIPLIER: 0.2, // Make trail 20% of original width
+        COLOR: '#90EE90', // LightGreen
+        SYMBOL: '-',
     },
     INVINCIBLE: {
         DURATION_MS: 3000, // 3 seconds
+        COLOR: '#FF00FF', // Magenta
+        SYMBOL: '🛡️', // Shield emoji
     },
     REVERSE_CONTROLS: {
         DURATION_MS: 5000, // 5 seconds
+        COLOR: '#800080', // Purple
+        SYMBOL: '↔️', // Left-right arrow
     },
+    // --- New Powerup Constants ---
+    GHOST_MODE: {
+        DURATION_MS: 4000, // 4 seconds
+        COLOR: '#E6E6FA', // Lavender (ghostly color)
+        SYMBOL: '👻', // Ghost emoji
+    },
+    THICK_TRAIL: {
+        DURATION_MS: 8000, // 8 seconds
+        TRAIL_RADIUS_MULTIPLIER: 2.5, // Make trail 2.5x original width
+        COLOR: '#FFA500', // Orange
+        SYMBOL: '+',
+    },
+    CLEAR_OWN_TRAIL: {
+        // No duration - instantaneous
+        COLOR: '#FFFFFF', // White
+        SYMBOL: '🧹', // Broom emoji
+    },
+    RANDOM_TELEPORT: {
+        // No duration - instantaneous
+        COLOR: '#ADD8E6', // LightBlue
+        SYMBOL: '🌀', // Cyclone emoji
+    },
+    // --- General Constants ---
     DEFAULT_RADIUS: 10, // Visual radius on canvas
     DEFAULT_LIFETIME_MS: 10000, // How long powerups stay before despawning
 };
@@ -41,33 +78,37 @@ export interface Powerup {
     y: number;
     radius: number;
     createdAt: number; // Timestamp (ms) when created, for spawning animations or lifetime
-    // Optional: duration in milliseconds for timed effects
-    duration?: number; 
+    // duration is now defined in POWERUP_CONSTANTS
+    // duration?: number; 
 }
 
 // --- Drawing --- 
 // Basic function to draw a powerup (can be customized later)
 export function drawPowerup(ctx: CanvasRenderingContext2D, powerup: Powerup): void {
+    const constants = POWERUP_CONSTANTS[powerup.type];
+    if (!constants) return; // Should not happen
+
     ctx.beginPath();
     ctx.arc(powerup.x, powerup.y, powerup.radius, 0, Math.PI * 2);
     
-    // Basic visual differentiation (can be improved with icons/colors)
-    switch (powerup.type) {
-        case 'SPEED_BOOST': ctx.fillStyle = 'yellow'; break;
-        case 'SLOW_OTHERS': ctx.fillStyle = 'cyan'; break;
-        case 'THIN_TRAIL': ctx.fillStyle = 'lightgreen'; break;
-        case 'INVINCIBLE': ctx.fillStyle = 'magenta'; break;
-        // case 'CLEAR_SCREEN': ctx.fillStyle = 'orange'; break; // Removed
-        case 'REVERSE_CONTROLS': ctx.fillStyle = 'purple'; break;
-        default: ctx.fillStyle = 'grey';
-    }
-    
+    ctx.fillStyle = constants.COLOR || '#808080'; // Use defined color or fallback grey
     ctx.fill();
-    // Maybe draw a white border or an initial?
+
+    // Draw a white border 
     ctx.strokeStyle = 'white';
     ctx.lineWidth = 1;
     ctx.stroke();
     ctx.closePath();
+
+    // Draw Symbol in the center
+    const symbol = constants.SYMBOL;
+    if (symbol) {
+        ctx.fillStyle = 'black'; // Symbol color
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.font = `bold ${powerup.radius * 1.2}px 'Poppins', sans-serif`; // Adjust font size based on radius
+        ctx.fillText(symbol, powerup.x, powerup.y);
+    }
 }
 
 // --- Effect Application (Placeholders - requires modifications to Player and Game State) ---
