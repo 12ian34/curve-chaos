@@ -6,6 +6,25 @@ multiplayer game inspired by "Achtung, die Kurve!"
 
 [https://curvechaos.netlify.app](https://curvechaos.netlify.app)
 
+## how to play
+
+### starting a game
+
+1. Select the number of players (1-4) using the +/- buttons.
+2. Optionally, click "Change" next to a player's control keys to rebind them.
+3. Select either "Classic" or "Arcade" mode. In Arcade mode, collect power-ups for temporary advantages or disadvantages.
+4. Press Enter to start the game.
+
+### playing
+
+- Use your assigned keys to turn left or right.
+- Avoid hitting the window boundaries or any player's trail (including your own, except during temporary invincibility from holes or power-ups).
+- Be the last player standing to win the round.
+
+### winning
+
+The first player to reach 30 points with a lead of at least 2 points wins the session.
+
 ## features
 
 *   **Multiplayer:** Supports 1-4 local players.
@@ -53,15 +72,4 @@ multiplayer game inspired by "Achtung, die Kurve!"
     npm run dev
     ```
 4.  Open your browser to the local address provided by Vite (usually `http://localhost:5173`).
-5.  **Use the main menu:**
-    *   Select the number of players (1-4) using the +/- buttons.
-    *   Optionally, click "Change" next to a player's control keys to rebind them.
-    *   Select either "Classic" or "Arcade" mode.
-    *   Press Enter to start the game.
-6.  **Gameplay:**
-    *   Use your assigned keys to turn left or right.
-    *   Avoid hitting the window boundaries or any player's trail (including your own, except during temporary invincibility from holes or power-ups).
-    *   Be the last player standing to win the round.
-    *   In Arcade mode, collect power-ups for temporary advantages or disadvantages.
-7.  **Winning:** The first player to reach 30 points with a lead of at least 2 points wins the session.
 
