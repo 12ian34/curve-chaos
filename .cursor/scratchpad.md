@@ -280,37 +280,68 @@ This version will be built using HTML, TypeScript, and the HTML Canvas API for r
 
 ## Executor's Feedback or Assistance Requests
 
-- Task "Setup Basic HTML and Canvas" completed successfully. Verified by running `npm run dev` and observing the initial HTML structure, canvas, and console logs.
-- Task "Implement Player Movement (Single Player)" completed successfully. Verified visually: a single player dot moves and turns correctly based on Arrow key input, leaving an implicit trail (as `clearRect` is not yet active).
-- Task "Implement Trail Drawing" completed successfully. Verified visually: Player leaves a continuous trail, and the canvas clears correctly each frame.
-- Task "Implement Collision Detection" completed successfully. Verified visually: Player stops moving and head disappears upon hitting canvas boundaries or its own trail. Console logs confirm collisions.
-- Task "Implement Game Loop and State" completed successfully. Verified visually: Game starts in 'WaitingToStart', transitions to 'Running' on Enter, handles player movement/collision, transitions to 'GameOver' on collision, and restarts on Enter from GameOver state. State text is displayed appropriately.
-- Task "Add Multiple Players and Controls" completed successfully. Verified visually: Two players with distinct controls and colors operate correctly. Collision detection works between players and boundaries. Game Over state activates when only one player remains, displaying winner with a semi-transparent colored background square.
-- Task "Implement Game Modes (Classic/Arcade)" completed successfully. Verified visually: Start screen shows clickable buttons for Classic/Arcade modes. Selection is highlighted. Game only starts via Enter key after a mode is selected. Restarting from Game Over returns to mode selection with the last mode highlighted.
-- Task "Increase Player Count to 4" completed. Verified via code inspection and manual testing: `initializeGame` creates 4 players with distinct starts/colors; `playerControls` map in `player.ts` defines default keys for 4 players. Controls work.
-- Task "Refactor Input Handling for Configurable Controls" completed. Verified via code inspection: `updatePlayer` in `player.ts` already uses the `playerControls` map, meeting the task's success criteria.
-- Task "Implement Basic Control Selection UI" completed. Verified via manual testing: UI appears correctly in "WaitingToStart" state, allows changing keys for each player via button clicks and key presses, handles cancellation, and uses configured keys in-game. Layout issue fixed.
-- Task "Implement Player Count Selection" completed. Verified via manual testing: UI allows selecting 1-4 players, controls display updates accordingly, game initializes with the correct player count, and game logic functions correctly with variable players.
-- Task "Implement Scoring System Logic & Win Condition" completed. Verified via console logs: Scores increment correctly, scores persist across rounds (GameOver), scores reset on new game (WaitingToStart), and game correctly transitions to SessionOver state only when win condition (>=30 & win by 2) is met, otherwise transitions to GameOver. **(Note: This implementation awarded +1 to the winner, needs update for rank-based scoring)**
-- Task "Implement Score & Session Over Display" completed. Verified via manual testing: GameOver screen shows round scores. SessionOver screen appears when win condition met, shows the overall winner, final scores, and correct prompt. **(Note: Score display needs verification after rank-based scoring is implemented)**
+- **Task 1: Setup Basic HTML and Canvas** completed successfully. Verified by running `npm run dev` and observing the initial HTML structure, canvas, and console logs.
+
+- **Task 2: Implement Player Movement (Single Player)** completed successfully. Verified visually: a single player dot moves and turns correctly based on Arrow key input, leaving an implicit trail (as `clearRect` is not yet active).
+
+- **Task 3: Implement Trail Drawing** completed successfully. Verified visually: Player leaves a continuous trail, and the canvas clears correctly each frame.
+
+- **Task 4: Implement Collision Detection** completed successfully. Verified visually: Player stops moving and head disappears upon hitting canvas boundaries or its own trail. Console logs confirm collisions.
+
+- **Task 5: Implement Game Loop and State** completed successfully. Verified visually: Game starts in 'WaitingToStart', transitions to 'Running' on Enter, handles player movement/collision, transitions to 'GameOver' on collision, and restarts on Enter from GameOver state. State text is displayed appropriately.
+
+- **Task 6: Add Multiple Players and Controls** completed successfully. Verified visually: Two players with distinct controls and colors operate correctly. Collision detection works between players and boundaries. Game Over state activates when only one player remains, displaying winner with a semi-transparent colored background square.
+
+- **Task 7: Implement Game Modes (Classic/Arcade)** completed successfully. Verified visually: Start screen shows clickable buttons for Classic/Arcade modes. Selection is highlighted. Game only starts via Enter key after a mode is selected. Restarting from Game Over returns to mode selection with the last mode highlighted.
+
+- **Task 9: Increase Player Count to 4** completed. Verified via code inspection and manual testing: `initializeGame` creates 4 players with distinct starts/colors; `playerControls` map in `player.ts` defines default keys for 4 players. Controls work.
+
+- **Task 10: Refactor Input Handling for Configurable Controls** completed. Verified via code inspection: `updatePlayer` in `player.ts` already uses the `playerControls` map, meeting the task's success criteria.
+
+- **Task 11: Implement Basic Control Selection UI** completed. Verified via manual testing: UI appears correctly in "WaitingToStart" state, allows changing keys for each player via button clicks and key presses, handles cancellation, and uses configured keys in-game. Layout issue fixed.
+
+- **Task 12: Implement Player Count Selection** completed. Verified via manual testing: UI allows selecting 1-4 players, controls display updates accordingly, game initializes with the correct player count, and game logic functions correctly with variable players.
+
+- **Task 13 (Deprecated): Implement Scoring System Logic & Win Condition** completed. Verified via console logs: Scores increment correctly, scores persist across rounds (GameOver), scores reset on new game (WaitingToStart), and game correctly transitions to SessionOver state only when win condition (>=30 & win by 2) is met, otherwise transitions to GameOver. **(Note: This implementation awarded +1 to the winner, needs update for rank-based scoring)**
+
+- **Task 14 (Initial): Implement Score & Session Over Display** completed. Verified via manual testing: GameOver screen shows round scores. SessionOver screen appears when win condition met, shows the overall winner, final scores, and correct prompt. **(Note: Score display needs verification after rank-based scoring is implemented)**
+
 - **Task 13a: Track Player Elimination Order** completed. Added `eliminationOrder: number[]` array to `main.ts`. It's cleared in `initializeGame` and player IDs are pushed onto it when `player.isAlive` is set to `false` in the game loop's collision check. Verified via console logs that the array correctly tracks the order of elimination.
+
 - **Task 13b: Implement Rank-Based Scoring & Session Win Condition** completed. Modified `main.ts` end-of-round logic: calculates rank based on survivors and `eliminationOrder`; awards points (3/2/1/0); checks win condition (>=30 AND win by 2); transitions state correctly. Verified via console logs and manual testing across several rounds.
-- **Task 14: Implement Score & Session Over Display** completed. Updated `drawGameState` in `main.ts`: ensured `GameOver` screen uses current player scores; modified `SessionOver` screen to fetch scores from `lastScores`, sort players by score, and display correctly. Verified visually in both states.
+
+- **Task 14 (Final): Implement Score & Session Over Display** completed. Updated `drawGameState` in `main.ts`: ensured `GameOver` screen uses current player scores; modified `SessionOver` screen to fetch scores from `lastScores`, sort players by score, and display correctly. Verified visually in both states.
+
 - **Task 15: Handle Session Restart** completed. Verified that the existing code in `handleKeyDown` for the `SessionOver` state already correctly resets the game to `WaitingToStart`, clears scores and players, and redraws the initial state when Enter is pressed. No code changes were necessary.
+
 - **Task 16: Implement Trail Hole Generation** completed. Modified `src/player.ts`: added `isMakingHole` and `holeTimer` to `Player` interface/`createPlayer`; added logic in `updatePlayer` to randomly trigger hole state, manage timer, and conditionally skip adding path segments when `isMakingHole` is true. Verified visually: trails now have occasional gaps.
-- **Task 17: Implement Hole Passthrough Collision** completed. Verified implicitly via Task 16 implementation: since path segments are not added during hole generation, collision checks against those missing segments naturally do not trigger. Players can visually pass through the gaps. 
+
+- **Task 17: Implement Hole Passthrough Collision** completed. Verified implicitly via Task 16 implementation: since path segments are not added during hole generation, collision checks against those missing segments naturally do not trigger. Players can visually pass through the gaps.
+
 - **Task 18: Implement Collision Invincibility During Hole Generation** completed. Modified `checkCollisions` in `src/player.ts` to immediately return `false` if `player.isMakingHole` is true, skipping boundary and trail checks. Verified via manual testing: player does not die when hitting trails/boundaries while their own trail has a gap forming.
+
 - **Task 8a: Review & Finalize Powerup Types** completed. Updated `src/powerup.ts`: removed `CLEAR_SCREEN`, updated `REVERSE_CONTROLS` description, added `POWERUP_CONSTANTS` object with durations/magnitudes, updated `drawPowerup`. Verified via code inspection.
+
 - **Task 8b: Implement Powerup Spawning & Despawning** completed. Added filter logic in `main.ts` game loop to remove powerups from `activePowerups` based on `POWERUP_CONSTANTS.DEFAULT_LIFETIME_MS`. Verified existing logic already correctly handles Arcade-only spawning. Verified visually: powerups appear and disappear over time.
+
 - **Task 8c: Implement Player-Powerup Collision** completed. Added collision check logic in `main.ts` game loop between living players and active powerups (Arcade mode only). Collected powerup IDs are tracked and used to filter `activePowerups` after the player loop. Verified via console logs on collection and visual disappearance of powerups.
+
 - **Task 8d: Implement Powerup Effects (Instantaneous)** completed (N/A). None of the currently defined powerups have instantaneous effects, so no implementation was required for this step.
+
 - **Task 8e: Implement Powerup Effects (Timed - Player State)** completed. Added `activeEffects` map to `Player` interface. Created `applyPowerupEffect` in `main.ts` to add expiry timestamps to this map upon collection. Modified `updatePlayer` to check/remove expired effects, apply speed boost/reversed controls. Modified `checkCollisions` to apply invincibility effect. Modified `drawTrail` to apply thin trail effect. Verified effects apply and expire correctly via manual testing and console logs.
+
 - **Task 8f: Implement Powerup Effects (Timed - Global/Other Players)** completed. Verified that `applyPowerupEffect` correctly adds `SLOW_OTHERS` effect to other players' `activeEffects` map, and `updatePlayer` correctly checks this map and applies the speed reduction. Verified effect applies to other players and expires correctly via manual testing.
+
 - **Task 8g: Visual Feedback for Powerups** completed. Modified `drawPlayer` in `src/player.ts` to add visual cues (outer colored circle, alpha pulse, color flash) for active effects like speed boost, invincibility (powerup or hole), slow, and reverse controls. Verified visually that indicators appear correctly when effects are active.
+
 - **Task 19: Implement Randomized Starting Positions with Edge Buffer** completed. Calculated minimum turn radius based on max speed and turn rate. Modified `initializeGame` in `src/main.ts` to define a safe spawn area buffered by 2x this radius from the edges. Players are now created with random X, Y positions within this area and a random initial angle, replacing the fixed start positions.
+
 - **Task 20: Refine Color Palette & Background** completed. Background changed to a dark gradient. Popup backgrounds changed to dark gradients with winner-color borders. Default button colors adjusted.
+
 - **Task 21: Improve Typography** completed. Added Poppins font via Google Fonts link in `index.html`. Updated text drawing calls in `src/main.ts` to use Poppins font.
+
 - **Task 22: Enhance UI Element Styling** completed. Added subtle vertical gradients to buttons on the `WaitingToStart` screen.
+
 - **Task 23: (Optional) Add Simple Visual Polish** was skipped as per user request.
 
 *(No new feedback yet)*
