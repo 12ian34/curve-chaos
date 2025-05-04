@@ -12,7 +12,7 @@ const SAFE_ZONE_BUFFER = 2 * MIN_TURN_RADIUS; // Approx 114.6 pixels
 console.log('curve chaos - loading...');
 
 // --- Game States ---
-type GameState = 'WaitingToStart' | 'Running' | 'GameOver' | 'SessionOver';
+type GameState = 'WaitingToStart' | 'Running' | 'GameOver' | 'SessionOver' | 'Paused';
 type GameMode = 'Classic' | 'Arcade' | null; // Allow null when no mode is selected
 
 const canvas = document.getElementById('gameCanvas') as HTMLCanvasElement | null;
@@ -53,6 +53,9 @@ let lastPowerupSpawnTime = 0; // Initialize to 0
 const POWERUP_SPAWN_INTERVAL = 3000; // milliseconds (e.g., every 3 seconds)
 const POWERUP_RADIUS = 10;
 let eliminationOrder: number[] = []; // Array to store player IDs in elimination order
+
+// --- Pause State Variables ---
+let pauseStartTime: number | null = null;
 
 // State for key binding process
 let waitingForKeyBinding: { playerId: number; direction: 'left' | 'right' } | null = null;
@@ -264,9 +267,11 @@ function handleKeyDown(event: KeyboardEvent) {
             console.log('Key binding cancelled.');
             waitingForKeyBinding = null;
         } else {
-            // Basic validation: Avoid modifier keys or very short keys? (Can enhance later)
-            // For now, accept most printable keys. Consider a blacklist if needed.
-            if (key.length === 1 || key.startsWith('arrow') || key.startsWith('numpad')) {
+            // --- Prevent binding Space or Enter ---
+            if (key === ' ' || key === 'spacebar' || key === 'enter') {
+                console.log('Cannot bind Space or Enter key.');
+                // Keep waiting for a valid key, maybe add UI feedback later
+            } else if (key.length === 1 || key.startsWith('arrow') || key.startsWith('numpad')) {
                 const { playerId, direction } = waitingForKeyBinding;
                 setPlayerControl(playerId, direction, key);
                 waitingForKeyBinding = null;
@@ -285,26 +290,60 @@ function handleKeyDown(event: KeyboardEvent) {
         return; // Stop further processing
     }
 
-    // --- Normal Key Handling ---
-    keyStates[key] = true;
-
-    // Handle game start/restart
-    if (key === 'enter') {
-        if (gameState === 'WaitingToStart') {
-            if (waitingForKeyBinding) return; // Don't start if binding
-            if (selectedGameMode) { // Only start if a mode is selected
-                console.log('Enter pressed, starting game with mode:', selectedGameMode);
-                if (canvas && ctx) {
-                    lastScores = {}; // Reset scores when starting fresh from menu
-                    players = initializeGame(canvas, selectedPlayerCount, lastScores);
-                } else {
-                    console.error('Cannot start game, canvas or context missing!');
-                }
+    // --- Handle Space Bar (Start/Pause/Unpause) ---
+    if (key === ' ' || key === 'spacebar') { // Handle both spacebar variations
+        if (gameState === 'WaitingToStart' && selectedGameMode && !waitingForKeyBinding) {
+            console.log('Space pressed, starting game with mode:', selectedGameMode);
+            if (canvas && ctx) {
+                lastScores = {}; // Reset scores when starting fresh from menu
+                players = initializeGame(canvas, selectedPlayerCount, lastScores);
             } else {
-                console.log('Enter pressed, but no game mode selected.');
+                console.error('Cannot start game, canvas or context missing!');
             }
             return;
-        } else if (gameState === 'GameOver') {
+        } else if (gameState === 'Running') {
+            gameState = 'Paused';
+            console.log('Game Paused');
+            // Record pause start time
+            pauseStartTime = performance.now(); 
+            if (ctx) drawGameState(ctx, players); // Redraw to show pause screen
+            return;
+        } else if (gameState === 'Paused') {
+            gameState = 'Running';
+            console.log('Game Resumed');
+            // Handle timer adjustments if pause occurred
+            if (pauseStartTime !== null) {
+                const pausedDuration = performance.now() - pauseStartTime;
+                console.log(`Resuming after paused duration: ${pausedDuration.toFixed(0)} ms`);
+
+                // Adjust player effect timers
+                for (const player of players) {
+                    for (const effectType in player.activeEffects) {
+                        const expiryTime = player.activeEffects[effectType as PowerupType];
+                        if (expiryTime) {
+                            player.activeEffects[effectType as PowerupType] = expiryTime + pausedDuration;
+                        }
+                    }
+                }
+
+                // Adjust powerup spawn timestamps (to extend lifetime)
+                for (const powerup of activePowerups) {
+                    powerup.createdAt += pausedDuration;
+                }
+                
+                // Adjust the global powerup spawn timer
+                lastPowerupSpawnTime += pausedDuration;
+
+                pauseStartTime = null; // Reset pause start time
+            }
+            // No need to redraw immediately, gameLoop will take over
+            return;
+        }
+    }
+
+    // --- Handle Enter Key (Restart Round / Return to Menu) ---
+    if (key === 'enter') {
+        if (gameState === 'GameOver') {
             console.log('Enter pressed, restarting round...');
             if (canvas && ctx) {
                 // Pass the lastScores map to preserve scores across rounds
@@ -327,9 +366,8 @@ function handleKeyDown(event: KeyboardEvent) {
         }
     }
 
-    // Player controls are now handled in updatePlayer based on keyStates
-    // if (gameState !== 'Running' || !player1) return;
-    // ... removed old single-player keydown logic ...
+    // --- Normal Key State Update (for turning) ---
+    keyStates[key] = true;
 }
 
 function handleKeyUp(event: KeyboardEvent) {
@@ -576,6 +614,13 @@ function applyPowerupEffect(player: Player, powerup: Powerup, allPlayers: Player
 
 // --- Game Loop ---
 function gameLoop(timestamp: number, context: CanvasRenderingContext2D, currentPlayers: Player[] | null) {
+    // --- Pause Check --- 
+    if (gameState === 'Paused') {
+        // If paused, just request the next frame without updating or drawing over the pause screen
+        requestAnimationFrame((ts) => gameLoop(ts, context, currentPlayers)); 
+        return; // Skip the rest of the loop
+    }
+
     // Calculate playable width for use in collision checks
     const canvasWidth = context.canvas.width;
     const leaderboardWidth = 250; // UPDATED WIDTH
@@ -717,60 +762,29 @@ function gameLoop(timestamp: number, context: CanvasRenderingContext2D, currentP
             if (highestScore >= WIN_SCORE && (scores.length < 2 || highestScore >= secondHighestScore + WIN_DIFFERENCE)) {
                 gameState = 'SessionOver';
                 console.log(`Session Over! Player with score ${highestScore} wins the game! (Scores: ${scores.join(', ')})`);
+                 // Draw Session Over screen immediately after state change
+                 if (ctx) drawGameState(ctx, players);
             } else {
                 gameState = 'GameOver';
                 console.log('Round Over! Starting next round setup. (Scores: ', lastScores, ')');
+                 // Draw Game Over screen immediately after state change
+                 if (ctx) drawGameState(ctx, players);
             }
         }
-    }
 
-    // --- Draw ---
-    context.clearRect(0, 0, context.canvas.width, context.canvas.height);
-
-    // Draw Background Gradient
-    const gradient = context.createLinearGradient(0, 0, 0, context.canvas.height);
-    gradient.addColorStop(0, '#1a0a2a'); // Dark purple/blue at the top
-    gradient.addColorStop(1, '#0a0a0a'); // Very dark grey/near-black at the bottom
-    context.fillStyle = gradient;
-    context.fillRect(0, 0, context.canvas.width, context.canvas.height);
-
-    // Draw Playable Area Border
-    context.strokeStyle = 'rgba(200, 200, 200, 0.5)'; // Light grey, semi-transparent
-    context.lineWidth = 2;
-    context.strokeRect(1, 1, playableWidth - 2, canvasHeight - 2); // Inset slightly for line width
-
-    // Draw Trails
-    if (currentPlayers) {
-        for (const player of currentPlayers) {
-            drawTrail(context, player);
+        // --- Draw Running Game Screen (Only if still Running) --- 
+        if (gameState === 'Running') { // Add this check
+            drawRunningGameScreen(context, currentPlayers);
         }
     }
 
-    // Draw Powerups (before players)
-    if (gameState === 'Running' || gameState === 'GameOver') { // Draw even if game over
-        for (const powerup of activePowerups) {
-            drawPowerup(context, powerup);
-        }
-    }
-
-    // Draw Player Heads
-    if (currentPlayers) {
-        for (const player of currentPlayers) {
-            if (player.isAlive) { // Check isAlive here too
-                drawPlayer(context, player);
-            }
-        }
-    }
-
-    // Draw Game State Text
-    drawGameState(context, currentPlayers);
-
-    // Draw Leaderboard
-    drawLeaderboard(context, players);
+    // --- Draw (General - Now mostly handled by state-specific calls) ---
+    // The main game elements are drawn above IF the state is Running.
+    // Overlays/Menus for other states (WaitingToStart, Paused, GameOver, SessionOver) 
+    // are drawn via direct calls to drawGameState() when those states are entered 
+    // or initially on load.
 
     // Request the next frame
-    // Note: We pass players here, which might be null if game hasn't started
-    // or potentially after game over, depending on reset logic. The loop handles null currentPlayers.
     requestAnimationFrame((ts) => gameLoop(ts, context, players));
 }
 
@@ -878,6 +892,52 @@ function calculateButtonLayout(canvasWidth: number, canvasHeight: number) {
     ];
 }
 
+// --- Helper to draw the current game screen (used by Running and Paused states) ---
+function drawRunningGameScreen(context: CanvasRenderingContext2D, currentPlayers: Player[] | null) {
+    // Calculate playable width
+    const canvasWidth = context.canvas.width;
+    const leaderboardWidth = 250; 
+    const padding = 15; 
+    const playableWidth = canvasWidth - leaderboardWidth - (2 * padding);
+    const canvasHeight = context.canvas.height;
+
+    // Draw Background Gradient
+    const gradient = context.createLinearGradient(0, 0, 0, canvasHeight);
+    gradient.addColorStop(0, '#1a0a2a'); 
+    gradient.addColorStop(1, '#0a0a0a'); 
+    context.fillStyle = gradient;
+    context.fillRect(0, 0, canvasWidth, canvasHeight);
+
+    // Draw Playable Area Border
+    context.strokeStyle = 'rgba(200, 200, 200, 0.5)'; 
+    context.lineWidth = 2;
+    context.strokeRect(1, 1, playableWidth - 2, canvasHeight - 2); 
+
+    // Draw Trails
+    if (currentPlayers) {
+        for (const player of currentPlayers) {
+            drawTrail(context, player);
+        }
+    }
+
+    // Draw Powerups (always draw if they exist, even if paused)
+    // This ensures they don't disappear when pausing
+    for (const powerup of activePowerups) {
+        drawPowerup(context, powerup);
+    }
+
+    // Draw Player Heads
+    if (currentPlayers) {
+        for (const player of currentPlayers) {
+            if (player.isAlive) { 
+                drawPlayer(context, player);
+            }
+        }
+    }
+    // Draw Leaderboard (always draw)
+    drawLeaderboard(context, players);
+}
+
 // --- Draw Game State Function ---
 function drawGameState(context: CanvasRenderingContext2D, currentPlayers: Player[] | null) {
     const canvasWidth = context.canvas.width;
@@ -885,21 +945,35 @@ function drawGameState(context: CanvasRenderingContext2D, currentPlayers: Player
     const currentControls = getPlayerControls(); // Get current controls
     const defaultFont = "'Poppins', sans-serif"; // Define font family
 
-    // Reset button arrays for recalculation
-    modeButtons = [];
-    keyBindButtons = []; 
-    playerCountButtons = []; // Reset player count buttons too
+    // This function now PRIMARILY handles drawing OVERLAYS or specific state screens,
+    // NOT the main running game screen (that's drawRunningGameScreen).
 
-    // Initialize/Recalculate button layout if needed (simplified logic)
-    if (canvasWidth > 0) {
-        calculateButtonLayout(canvasWidth, canvasHeight); // Keep mode button calculation
-        // Key bind button calculation will happen inside WaitingToStart state drawing
+    // Reset button arrays for recalculation (only for WaitingToStart)
+    if (gameState === 'WaitingToStart') {
+        modeButtons = [];
+        keyBindButtons = []; 
+        playerCountButtons = []; // Reset player count buttons too
+        // Calculate buttons specific to WaitingToStart
+        if (canvasWidth > 0) {
+            calculateButtonLayout(canvasWidth, canvasHeight);
+        }
     }
 
     context.textAlign = 'center';
     context.textBaseline = 'middle'; 
     const centerX = canvasWidth / 2;
     const centerY = canvasHeight / 2;
+
+    // Clear canvas before drawing states (except for Running/Paused which draw their own background)
+    if (gameState !== 'Running' && gameState !== 'Paused') {
+        context.clearRect(0, 0, canvasWidth, canvasHeight);
+        // Optionally draw the default background for non-running states?
+        const bgGradient = context.createLinearGradient(0, 0, 0, canvasHeight);
+        bgGradient.addColorStop(0, '#1a0a2a');
+        bgGradient.addColorStop(1, '#0a0a0a');
+        context.fillStyle = bgGradient;
+        context.fillRect(0, 0, canvasWidth, canvasHeight);
+    }
 
     if (gameState === 'WaitingToStart') {
         context.fillStyle = '#eee'; // Brighter text
@@ -916,7 +990,6 @@ function drawGameState(context: CanvasRenderingContext2D, currentPlayers: Player
         const pcStartX = centerX - pcTotalWidth / 2;
 
         // Decrease Button
-        // context.fillStyle = '#555'; // Default Button Color (Keep or adjust?)
         const btnGradientMinus = context.createLinearGradient(pcStartX, playerCountY - pcBtnHeight / 2, pcStartX, playerCountY + pcBtnHeight / 2);
         btnGradientMinus.addColorStop(0, '#666'); // Lighter top
         btnGradientMinus.addColorStop(1, '#444'); // Darker bottom
@@ -936,7 +1009,6 @@ function drawGameState(context: CanvasRenderingContext2D, currentPlayers: Player
         
         // Increase Button
         const increaseBtnX = pcStartX + pcBtnWidth + pcSpacing + pcTextWidth + pcSpacing;
-        // context.fillStyle = '#555'; // Default Button Color (Keep or adjust?)
         const btnGradientPlus = context.createLinearGradient(increaseBtnX, playerCountY - pcBtnHeight / 2, increaseBtnX, playerCountY + pcBtnHeight / 2);
         btnGradientPlus.addColorStop(0, '#666'); // Lighter top
         btnGradientPlus.addColorStop(1, '#444'); // Darker bottom
@@ -961,7 +1033,6 @@ function drawGameState(context: CanvasRenderingContext2D, currentPlayers: Player
                 btnGradient.addColorStop(1, '#333'); // Darker grey
             }
             context.fillStyle = btnGradient;
-            // context.fillStyle = isSelected ? '#007700' : '#444'; // Adjusted default grey
             drawRoundedRect(context, button.x, button.y, button.width, button.height, button.radius);
             context.fill();
 
@@ -1018,7 +1089,6 @@ function drawGameState(context: CanvasRenderingContext2D, currentPlayers: Player
             
             // Draw Left Change Button
             const isWaitingLeft = waitingForKeyBinding?.playerId === i && waitingForKeyBinding?.direction === 'left';
-            // context.fillStyle = isWaitingLeft ? '#ff8c00' : '#444'; // Orange when waiting, adjusted default grey
             const btnGradientLeft = context.createLinearGradient(leftBtnX, playerY - changeBtnHeight / 2, leftBtnX, playerY + changeBtnHeight / 2);
             if (isWaitingLeft) {
                 btnGradientLeft.addColorStop(0, '#ffa500'); // Lighter orange
@@ -1050,7 +1120,6 @@ function drawGameState(context: CanvasRenderingContext2D, currentPlayers: Player
 
             // Draw Right Change Button
             const isWaitingRight = waitingForKeyBinding?.playerId === i && waitingForKeyBinding?.direction === 'right';
-            // context.fillStyle = isWaitingRight ? '#ff8c00' : '#444'; // Orange when waiting, adjusted default grey
             const btnGradientRight = context.createLinearGradient(rightBtnX, playerY - changeBtnHeight / 2, rightBtnX, playerY + changeBtnHeight / 2);
             if (isWaitingRight) {
                 btnGradientRight.addColorStop(0, '#ffa500'); // Lighter orange
@@ -1077,12 +1146,29 @@ function drawGameState(context: CanvasRenderingContext2D, currentPlayers: Player
         if (selectedGameMode && !waitingForKeyBinding) { // Only show if not binding a key
             context.fillStyle = '#bbb';
             context.font = `20px ${defaultFont}`; // Poppins Regular
-            context.fillText('Press Enter to Start', centerX, canvasHeight - 60); // Adjust position
+            context.fillText('Press Space to Start', centerX, canvasHeight - 60); // Changed from Enter to Space
         } else if (waitingForKeyBinding) {
             context.fillStyle = '#ffcc00'; // Yellow prompt for waiting
             context.font = `20px ${defaultFont}`; // Poppins Regular
             context.fillText(`Press a key for Player ${waitingForKeyBinding.playerId} ${waitingForKeyBinding.direction}... (Esc to cancel)`, centerX, canvasHeight - 60);
         }
+    } else if (gameState === 'Paused') {
+        // 1. Draw the underlying game screen as it was
+        drawRunningGameScreen(context, currentPlayers);
+
+        // 2. Draw the semi-transparent overlay
+        context.fillStyle = 'rgba(0, 0, 0, 0.6)'; // Darker overlay
+        context.fillRect(0, 0, canvasWidth, canvasHeight);
+
+        // 3. Draw "Paused" text and resume instruction
+        context.fillStyle = 'white';
+        context.font = `bold 60px ${defaultFont}`;
+        context.textAlign = 'center';
+        context.textBaseline = 'middle';
+        context.fillText('Paused', centerX, centerY - 30);
+
+        context.font = `24px ${defaultFont}`;
+        context.fillText('Press Space to Resume', centerX, centerY + 30);
 
     } else if (gameState === 'GameOver') {
         const winner = currentPlayers?.find(p => p.isAlive);
@@ -1120,7 +1206,7 @@ function drawGameState(context: CanvasRenderingContext2D, currentPlayers: Player
 
         // Draw Play Again text
         context.font = `22px ${defaultFont}`; // Poppins Regular
-        context.fillText('Press Enter to Play Again', centerX, centerY); // Adjust
+        context.fillText('Press Enter to Play Again', centerX, centerY); // Kept as Enter
         
         // Draw Winner text (or Draw)
         context.font = `bold 30px ${defaultFont}`; // Poppins Bold
@@ -1132,6 +1218,10 @@ function drawGameState(context: CanvasRenderingContext2D, currentPlayers: Player
              context.fillText('Draw!', centerX, centerY + 50); // Draw message
         }
 
+        // Draw Play Again text (different prompt)
+        context.font = `20px ${defaultFont}`; // Poppins Regular
+        context.fillStyle = '#ddd';
+        context.fillText('Press Enter for Main Menu', centerX, boxY + boxHeight - 25); // Kept as Enter
     } else if (gameState === 'SessionOver') {
         // --- Session Over Screen (Game End) --- 
         const scores = currentPlayers ? Object.entries(lastScores).sort(([, scoreA], [, scoreB]) => scoreB - scoreA) : [];
@@ -1182,43 +1272,24 @@ function drawGameState(context: CanvasRenderingContext2D, currentPlayers: Player
              context.fillText('Session Complete!', centerX, boxY + 85);
         }
 
-        // Draw Final Scores (Similar to GameOver, but inside the SessionOver box) (REMOVED - Now shown in persistent leaderboard)
-        // if (currentPlayers && currentPlayers.length > 0) {
-        //     context.font = '18px Arial';
-        //     context.fillStyle = '#eee';
-        //     const scoreStartY = boxY + 125; // Position scores lower
-        //     const scoreLineHeight = 25;
-        //     context.fillText('Final Scores:', centerX, scoreStartY);
-        //
-        //     // Sort players by final score stored in lastScores for display order
-        //     const playerIdsSortedByScore = Object.keys(lastScores).sort((a, b) => lastScores[parseInt(b)]! - lastScores[parseInt(a)]!);
-        //
-        //     playerIdsSortedByScore.forEach((playerIdStr, index) => {
-        //         const playerId = parseInt(playerIdStr);
-        //         const player = currentPlayers.find(p => p.id === playerId);
-        //         const score = lastScores[playerId];
-        //         
-        //         if (player && score !== undefined) { // Make sure player exists and score is found
-        //             const scoreText = `Player ${player.id}: ${score}`;
-        //             context.fillStyle = player.color; // Use player color
-        //             context.fillText(scoreText, centerX, scoreStartY + (index + 1) * scoreLineHeight);
-        //         }
-        //     });
-        // }
-
          // Draw Play Again text (different prompt)
         context.font = `20px ${defaultFont}`; // Poppins Regular
         context.fillStyle = '#ddd';
         context.fillText('Press Enter for Main Menu', centerX, boxY + boxHeight - 25); 
     }
-    // Reset baseline and fillStyle
-    context.textBaseline = 'alphabetic';
+
+    // Reset baseline and fillStyle after drawing state text
+    context.textBaseline = 'alphabetic'; 
     context.fillStyle = 'black'; 
 }
 
 // --- Start Game ---
 resizeCanvas(); // Initial sizing of the canvas
 assignInitialPlayerNames(selectedPlayerCount); // Assign initial names based on loaded/default count
+// Initial draw of the WaitingToStart screen
+if (gameState === 'WaitingToStart' && ctx) {
+    drawGameState(ctx, players);
+}
 console.log('Game ready. Initial state:', gameState);
 console.log('Starting game loop...');
 requestAnimationFrame((ts) => gameLoop(ts, ctx, players)); 

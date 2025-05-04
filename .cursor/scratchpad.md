@@ -348,11 +348,11 @@ This version will be built using HTML, TypeScript, and the HTML Canvas API for r
 - [x] **20. Refine Color Palette & Background**
 - [x] **21. Improve Typography**
 - [x] **22. Enhance UI Element Styling**
-- [ ] **23. (Optional) Add Simple Visual Polish** (Skipped by user)
-- [ ] **24. Save/Load Settings**
-- [ ] **25. Define New Powerup Types**
-- [ ] **26. Implement New Powerup Effects & Visuals**
-- [ ] **27. Adjust Powerup Spawning/Balancing**
+- [x] **23. (Optional) Add Simple Visual Polish** (Skipped by user)
+- [x] **24. Save/Load Settings**
+- [x] **25. Define New Powerup Types**
+- [x] **26. Implement New Powerup Effects & Visuals**
+- [x] **27. Adjust Powerup Spawning/Balancing**
 - [ ] **28. Define Pause State & Input**
 - [ ] **29. Suspend Game Logic**
 - [ ] **30. Implement Pause Visual Indicator**
@@ -431,6 +431,14 @@ This version will be built using HTML, TypeScript, and the HTML Canvas API for r
 - **Task 26: Implement New Powerup Effects & Visuals** completed. Modified `src/player.ts`: `checkCollisions` handles `GHOST_MODE`, `drawTrail` handles `THICK_TRAIL`, `drawPlayer` adds visual indicators for `GHOST_MODE` and `THICK_TRAIL`. Modified `src/main.ts`: `applyPowerupEffect` handles instantaneous effects (`CLEAR_OWN_TRAIL`, `RANDOM_TELEPORT`) and adds timed effects (`GHOST_MODE`, `THICK_TRAIL`) to `activeEffects`.
 
 - **Task 27: Adjust Powerup Spawning/Balancing** completed. Added new powerup types to the random selection list in `spawnPowerup` in `src/main.ts`. Further balancing deferred pending playtesting.
+
+- **Task 28: Define Pause State & Input** completed. Added `Paused` to `GameState` type. Modified `handleKeyDown` in `src/main.ts`: 'Space' now handles Start/Pause/Unpause; 'Enter' handles GameOver restart and SessionOver menu return. Updated UI prompts in `drawGameState`.
+
+- **Task 29: Suspend Game Logic** completed. Added check at the start of `gameLoop` in `src/main.ts` to `return` immediately if `gameState` is `Paused`, preventing updates and non-pause drawing.
+
+- **Task 30: Implement Pause Visual Indicator** completed. Refactored drawing in `src/main.ts`: created `drawRunningGameScreen` helper; updated `drawGameState` to handle `Paused` state by calling helper and drawing overlay.
+
+- **Task 31: Handle Timers Across Pause** completed. Added `pauseStartTime` variable. Added logic in `handleKeyDown` (for `Paused` state) in `src/main.ts` to calculate pause duration and adjust player effect expiry times, powerup `createdAt` times, and `lastPowerupSpawnTime`.
 
 *(No new feedback yet)*
 
