@@ -1,0 +1,30 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="500" height="500" viewBox="0 0 500 500">
+  <!-- black background -->
+  <rect width="500" height="500" fill="#000"/>
+
+  <!-- Six non‑overlapping, Tron‑style light‑snake curves -->
+  <!-- fixed stroke-width 24, three bright colours repeating, each confined to its own horizontal band -->
+
+  <!-- Curve 1 (pink), band ~30–110 -->
+  <path
+    d="M-50,70
+       C100,20 200,120 350,50
+       S600,90 650,30"
+    stroke="#FF6EC7" stroke-width="24" fill="none" stroke-linecap="round"/>
+
+
+  <!-- Curve 3 (green), band ~190–270 -->
+  <path
+    d="M-50,230
+       C120,180 220,280 360,220
+       S600,260 650,210"
+    stroke="#8AFF6E" stroke-width="24" fill="none" stroke-linecap="round"/>
+
+  <!-- Curve 5 (cyan), band ~350–430 -->
+  <path
+    d="M-50,390
+       C100,430 200,350 340,410
+       S600,380 650,420"
+    stroke="#6EFCFF" stroke-width="24" fill="none" stroke-linecap="round"/>
+    
+</svg>
