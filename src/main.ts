@@ -986,8 +986,7 @@ function drawGameState(context: CanvasRenderingContext2D, currentPlayers: Player
 
     context.textAlign = 'center';
     context.textBaseline = 'middle'; 
-    const centerX = displayWidth / 2;
-    const centerY = displayHeight / 2;
+
 
     // Clear canvas before drawing states (except for Running/Paused which draw their own background)
     if (gameState !== 'Running' && gameState !== 'Paused') {
@@ -1109,8 +1108,8 @@ function drawGameState(context: CanvasRenderingContext2D, currentPlayers: Player
 
         // --- Define buttons with SCALED coordinates/dimensions --- 
         modeButtons = [
-            { x: modeStartX_scaled, y: modeBtnY_scaled, width: modeBtnWidth_scaled, height: modeBtnHeight_scaled, text: 'Classic', mode: 'Classic' as GameMode, radius: modeBtnRadius_scaled },
-            { x: modeStartX_scaled + modeBtnWidth_scaled + modeSpacing_scaled, y: modeBtnY_scaled, width: modeBtnWidth_scaled, height: modeBtnHeight_scaled, text: 'Arcade', mode: 'Arcade' as GameMode, radius: modeBtnRadius_scaled },
+            { x: modeStartX_scaled, y: modeBtnY_scaled, width: modeBtnWidth_scaled, height: modeBtnHeight_scaled, text: '🏛️ Classic', mode: 'Classic' as GameMode, radius: modeBtnRadius_scaled },
+            { x: modeStartX_scaled + modeBtnWidth_scaled + modeSpacing_scaled, y: modeBtnY_scaled, width: modeBtnWidth_scaled, height: modeBtnHeight_scaled, text: '👾 Arcade', mode: 'Arcade' as GameMode, radius: modeBtnRadius_scaled },
         ];
 
         for (const button of modeButtons) {
@@ -1153,68 +1152,81 @@ function drawGameState(context: CanvasRenderingContext2D, currentPlayers: Player
         context.font = `bold ${26 * dpi}px ${defaultFont}`; 
         context.fillStyle = '#eee';
         context.textAlign = 'left'; // Align section title left
-        const controlBoxWidth_css = 600; 
+        const controlBoxWidth_css = 600; // Keep this width for now, seems sufficient
         const controlBoxStartX_css = scaledCenterX - controlBoxWidth_css / 2;
         const controlsTitleY_css = currentY_css;
         
         context.fillText('Player Controls', controlBoxStartX_css * dpi, controlsTitleY_css * dpi);
         
-        // --- Define layout values in CSS pixels --- 
-        const controlsStartY_css = controlsTitleY_css + 45; 
-        const lineHeight_css = 50; 
-        const playerColors = ['#ff4d4d', '#4dff4d', '#ff4dff', '#4dffff']; 
-        const columnPadding_css = 15; 
-        const keyBoxWidth_css = 90; 
-        const keyBoxHeight_css = 32; 
-        const keyBoxRadius_css = 8; 
-        const keyTextOffsetX_css = 18; 
-        const arrowSize_css = 5; 
+        // --- Define layout values in CSS pixels ---
+        const controlsStartY_css = controlsTitleY_css + 45;
+        const lineHeight_css = 50;
+        const playerColors = ['#ff4d4d', '#4dff4d', '#ff4dff', '#4dffff'];
+        const columnPadding_css = 20; // Increased padding slightly
+        const keyBoxWidth_css = 90;
+        const keyBoxHeight_css = 32;
+        const keyBoxRadius_css = 8;
+        // const keyTextOffsetX_css = 18; // No longer needed
+        // const arrowSize_css = 5; // No longer needed
 
         keyBindButtons = []; // Clear old buttons before repopulating
 
         for (let i = 1; i <= selectedPlayerCount; i++) {
-            // --- Calculate base Y position in CSS pixels --- 
-            const playerY_css = controlsStartY_css + (i - 1) * lineHeight_css; 
+            // --- Calculate base Y position in CSS pixels ---
+            const playerY_css = controlsStartY_css + (i - 1) * lineHeight_css;
             const playerControl = currentControls[i];
             if (!playerControl) continue; // Skip if controls not found
 
-            // --- Current X in CSS pixels --- 
-            let currentX_css = controlBoxStartX_css;
+            // --- Current X in CSS pixels ---
+            let currentX_css = controlBoxStartX_css; // Start from the beginning of the control box for each player row
 
             // Player Color Box
             context.fillStyle = playerColors[i - 1] || '#fff'; // Get color
-            // --- Scale coords & dimensions --- 
+            // --- Scale coords & dimensions ---
             const colorBoxSize_css = 24;
-            context.fillRect(currentX_css * dpi, (playerY_css - colorBoxSize_css / 2) * dpi, colorBoxSize_css * dpi, colorBoxSize_css * dpi); 
-            currentX_css += colorBoxSize_css + columnPadding_css;
+            context.fillRect(currentX_css * dpi, (playerY_css - colorBoxSize_css / 2) * dpi, colorBoxSize_css * dpi, colorBoxSize_css * dpi);
+            currentX_css += colorBoxSize_css + columnPadding_css; // Space after color box
 
             // Player Name
             context.fillStyle = '#ccc';
-            // --- Scale Font Size & Position --- 
-            context.font = ` ${20 * dpi}px ${defaultFont}`; 
+            // --- Scale Font Size & Position ---
+            context.font = ` ${20 * dpi}px ${defaultFont}`;
             context.textAlign = 'left';
             context.textBaseline = 'middle';
-            const displayName = playerNames[i] || `Player ${i}`; 
-            const nameMaxWidth_css = 180; 
+            const displayName = playerNames[i] || `Player ${i}`;
+            const nameMaxWidth_css = 180;
             context.fillText(displayName, currentX_css * dpi, playerY_css * dpi, nameMaxWidth_css * dpi); // Scale max width too
-            currentX_css += nameMaxWidth_css + columnPadding_css * 2; 
+            currentX_css += nameMaxWidth_css + columnPadding_css * 1.5; // Increased space after name
 
-            // --- Left Key Area ---
-            // --- Calculate scaled values --- 
-            const leftKeyAreaX_css = currentX_css;
-            const leftKeyAreaY_css = playerY_css - keyBoxHeight_css / 2;
-            const isWaitingLeft = waitingForKeyBinding?.playerId === i && waitingForKeyBinding?.direction === 'left';
-            
-            const keyBoxX_scaled = leftKeyAreaX_css * dpi;
-            const keyBoxY_scaled = leftKeyAreaY_css * dpi;
+            // --- Define shared key box/emoji values ---
+            const keyBoxY_scaled = (playerY_css - keyBoxHeight_css / 2) * dpi;
             const keyBoxWidth_scaled = keyBoxWidth_css * dpi;
             const keyBoxHeight_scaled = keyBoxHeight_css * dpi;
             const keyBoxRadius_scaled = keyBoxRadius_css * dpi;
+            const emojiFontSize_scaled = 20 * dpi; // Emoji font size in scaled pixels
+            const emojiWidth_css = 30; // Estimated width for emoji + padding
+
+            // --- Left Emoji ---
+            const leftEmojiX_scaled = currentX_css * dpi;
+            context.fillStyle = 'white';
+            context.font = `${emojiFontSize_scaled}px ${defaultFont}`;
+            context.textAlign = 'center'; // Center emoji horizontally
+            context.textBaseline = 'middle';
+            context.fillText('⬅️', leftEmojiX_scaled, playerY_css * dpi);
+            currentX_css += emojiWidth_css; // Increment X by emoji width + padding
+
+            // --- Left Key Area ---
+            // --- Calculate scaled values ---
+            // const leftKeyAreaX_css = currentX_css; // No longer needed as separate variable
+            // const leftKeyAreaY_css = playerY_css - keyBoxHeight_css / 2; // Use keyBoxY_scaled instead
+            const isWaitingLeft = waitingForKeyBinding?.playerId === i && waitingForKeyBinding?.direction === 'left';
+
+            const keyBoxX_scaled = currentX_css * dpi; // Use currentX_css directly for box position
 
             // Draw Background Box
             const btnGradientLeft = context.createLinearGradient(keyBoxX_scaled, keyBoxY_scaled, keyBoxX_scaled, keyBoxY_scaled + keyBoxHeight_scaled);
             if (isWaitingLeft) {
-                btnGradientLeft.addColorStop(0, '#cc9900'); btnGradientLeft.addColorStop(1, '#aa7700'); 
+                btnGradientLeft.addColorStop(0, '#cc9900'); btnGradientLeft.addColorStop(1, '#aa7700');
             } else {
                 btnGradientLeft.addColorStop(0, '#5a5a5a'); btnGradientLeft.addColorStop(1, '#444444');
             }
@@ -1224,58 +1236,40 @@ function drawGameState(context: CanvasRenderingContext2D, currentPlayers: Player
 
              // Draw Border (Subtle indication of clickability)
             context.strokeStyle = '#888';
-             // --- Scale Line Width & coords --- 
+             // --- Scale Line Width & coords ---
             context.lineWidth = 1 * dpi;
             drawRoundedRect(context, keyBoxX_scaled + 0.5 * dpi, keyBoxY_scaled + 0.5 * dpi, keyBoxWidth_scaled - 1 * dpi, keyBoxHeight_scaled - 1 * dpi, keyBoxRadius_scaled - 0.5 * dpi);
             context.stroke();
 
 
-            // Draw Key Text or "..."
+            // Draw Key Text or "..." (Centered)
             context.fillStyle = 'white';
-            // --- Scale Font Size & Position --- 
-            context.font = `bold ${18 * dpi}px ${defaultFont}`; 
-            context.textAlign = 'center'; 
+            // --- Scale Font Size & Position ---
+            context.font = `bold ${18 * dpi}px ${defaultFont}`;
+            context.textAlign = 'center';
             context.textBaseline = 'middle';
             const leftKeyText = isWaitingLeft ? '...' : playerControl.left.toUpperCase();
-            context.fillText(leftKeyText, keyBoxX_scaled + keyBoxWidth_scaled / 2 + (isWaitingLeft ? 0 : keyTextOffsetX_css * dpi / 2), playerY_css * dpi); 
+            // --- Center text using box center ---
+            context.fillText(leftKeyText, keyBoxX_scaled + keyBoxWidth_scaled / 2, playerY_css * dpi);
 
-            // Draw Left Arrow Icon (if not waiting)
-            if (!isWaitingLeft) {
-                // --- Scale coords & size --- 
-                const arrowX_scaled = (leftKeyAreaX_css + keyTextOffsetX_css) * dpi;
-                const arrowY_scaled = playerY_css * dpi;
-                const arrowSize_scaled = arrowSize_css * dpi;
-                context.beginPath();
-                context.moveTo(arrowX_scaled, arrowY_scaled);
-                context.lineTo(arrowX_scaled - arrowSize_scaled, arrowY_scaled - arrowSize_scaled);
-                context.moveTo(arrowX_scaled, arrowY_scaled);
-                context.lineTo(arrowX_scaled - arrowSize_scaled, arrowY_scaled + arrowSize_scaled);
-                context.strokeStyle = 'white';
-                // --- Scale Line Width --- 
-                context.lineWidth = 2 * dpi;
-                context.stroke();
-            }
+            // Draw Left Arrow Icon (if not waiting) - REMOVED
+            // if (!isWaitingLeft) { ... }
 
-             // --- Store SCALED button coordinates/dimensions --- 
+             // --- Store SCALED button coordinates/dimensions ---
             keyBindButtons.push({ x: keyBoxX_scaled, y: keyBoxY_scaled, width: keyBoxWidth_scaled, height: keyBoxHeight_scaled, playerId: i, direction: 'left' });
-            currentX_css += keyBoxWidth_css + columnPadding_css;
+            currentX_css += keyBoxWidth_css + columnPadding_css; // Space after left key box
 
              // --- Right Key Area ---
-            // --- Calculate scaled values --- 
-            const rightKeyAreaX_css = currentX_css;
-            const rightKeyAreaY_css = playerY_css - keyBoxHeight_css / 2;
+            // --- Calculate scaled values ---
+            // const rightKeyAreaX_css = currentX_css; // No longer needed
             const isWaitingRight = waitingForKeyBinding?.playerId === i && waitingForKeyBinding?.direction === 'right';
 
-            const rightKeyBoxX_scaled = rightKeyAreaX_css * dpi;
-            // rightKeyBoxY_scaled = keyBoxY_scaled
-            // rightKeyBoxWidth_scaled = keyBoxWidth_scaled
-            // rightKeyBoxHeight_scaled = keyBoxHeight_scaled
-            // rightKeyBoxRadius_scaled = keyBoxRadius_scaled
+            const rightKeyBoxX_scaled = currentX_css * dpi;
 
             // Draw Background Box
             const btnGradientRight = context.createLinearGradient(rightKeyBoxX_scaled, keyBoxY_scaled, rightKeyBoxX_scaled, keyBoxY_scaled + keyBoxHeight_scaled);
              if (isWaitingRight) {
-                btnGradientRight.addColorStop(0, '#cc9900'); btnGradientRight.addColorStop(1, '#aa7700'); 
+                btnGradientRight.addColorStop(0, '#cc9900'); btnGradientRight.addColorStop(1, '#aa7700');
             } else {
                 btnGradientRight.addColorStop(0, '#5a5a5a'); btnGradientRight.addColorStop(1, '#444444');
             }
@@ -1285,39 +1279,36 @@ function drawGameState(context: CanvasRenderingContext2D, currentPlayers: Player
 
              // Draw Border
             context.strokeStyle = '#888';
-             // --- Scale Line Width & coords --- 
+             // --- Scale Line Width & coords ---
             context.lineWidth = 1 * dpi;
             drawRoundedRect(context, rightKeyBoxX_scaled + 0.5 * dpi, keyBoxY_scaled + 0.5 * dpi, keyBoxWidth_scaled - 1 * dpi, keyBoxHeight_scaled - 1 * dpi, keyBoxRadius_scaled - 0.5 * dpi);
             context.stroke();
 
-            // Draw Key Text or "..."
+            // Draw Key Text or "..." (Centered)
             context.fillStyle = 'white';
-             // --- Scale Font Size & Position --- 
-            context.font = `bold ${18 * dpi}px ${defaultFont}`; 
+             // --- Scale Font Size & Position ---
+            context.font = `bold ${18 * dpi}px ${defaultFont}`;
             context.textAlign = 'center';
             context.textBaseline = 'middle';
             const rightKeyText = isWaitingRight ? '...' : playerControl.right.toUpperCase();
-            context.fillText(rightKeyText, rightKeyBoxX_scaled + keyBoxWidth_scaled / 2 - (isWaitingRight ? 0 : keyTextOffsetX_css * dpi / 2), playerY_css * dpi); 
+             // --- Center text using box center ---
+            context.fillText(rightKeyText, rightKeyBoxX_scaled + keyBoxWidth_scaled / 2, playerY_css * dpi);
 
-             // Draw Right Arrow Icon (if not waiting)
-             if (!isWaitingRight) {
-                 // --- Scale coords & size --- 
-                const arrowX_scaled = (rightKeyAreaX_css + keyBoxWidth_css - keyTextOffsetX_css) * dpi;
-                const arrowY_scaled = playerY_css * dpi;
-                const arrowSize_scaled = arrowSize_css * dpi;
-                context.beginPath();
-                context.moveTo(arrowX_scaled, arrowY_scaled);
-                context.lineTo(arrowX_scaled + arrowSize_scaled, arrowY_scaled - arrowSize_scaled);
-                context.moveTo(arrowX_scaled, arrowY_scaled);
-                context.lineTo(arrowX_scaled + arrowSize_scaled, arrowY_scaled + arrowSize_scaled);
-                context.strokeStyle = 'white';
-                // --- Scale Line Width --- 
-                context.lineWidth = 2 * dpi;
-                context.stroke();
-            }
+             // Draw Right Arrow Icon (if not waiting) - REMOVED
+             // if (!isWaitingRight) { ... }
 
-             // --- Store SCALED button coordinates/dimensions --- 
+             // --- Store SCALED button coordinates/dimensions ---
             keyBindButtons.push({ x: rightKeyBoxX_scaled, y: keyBoxY_scaled, width: keyBoxWidth_scaled, height: keyBoxHeight_scaled, playerId: i, direction: 'right' });
+            currentX_css += keyBoxWidth_css + columnPadding_css; // Space after right key box
+
+            // --- Right Emoji ---
+            const rightEmojiX_scaled = currentX_css * dpi;
+            context.fillStyle = 'white';
+            context.font = `${emojiFontSize_scaled}px ${defaultFont}`;
+            context.textAlign = 'center';
+            context.textBaseline = 'middle';
+            context.fillText('➡️', rightEmojiX_scaled, playerY_css * dpi);
+            // currentX_css += emojiWidth_css; // No need to increment further for this row
 
             // Reset context states if changed (optional, but good practice)
             context.textAlign = 'left'; // Reset default alignment
