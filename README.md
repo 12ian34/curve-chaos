@@ -1,6 +1,12 @@
 # curve chaos
 
+[![Netlify Status](https://api.netlify.com/api/v1/badges/0dd106cb-b1f2-4d87-b9ce-78225e56dbeb/deploy-status)](https://app.netlify.com/sites/curvechaos/deploys)
+
 A local multiplayer game inspired by the classic "Achtung, die Kurve!" built with TypeScript and HTML Canvas.
+
+## Deployment
+
+🚀 **Live Site:** [https://curvechaos.netlify.app](https://curvechaos.netlify.app)
 
 ## Features
 
