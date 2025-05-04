@@ -47,6 +47,18 @@ This version will be built using HTML, TypeScript, and the HTML Canvas API for r
     - **Performance:** Canvas visual effects (shadows, gradients, many particles) can impact performance; need to test.
     - **Font Loading:** Using web fonts requires proper CSS integration and handling potential loading delays (FOUT/FOIT).
     - **Consistency:** Apply chosen styles (colors, fonts) consistently across all UI elements.
+- **Pause Implementation:**
+    - **State Management:** Integrating a `Paused` state without disrupting existing state transitions (`WaitingToStart`, `Running`, `GameOver`, `SessionOver`).
+    - **Input Handling:** Capturing the pause key press reliably only during the `Running` state and toggling between `Running` and `Paused`. Ignoring other game inputs while paused.
+    - **Game Loop Suspension:** Effectively halting game logic updates (movement, collision, timers) while paused, but continuing rendering (including the pause overlay).
+    - **Timer Handling:** Accurately pausing and resuming timers (powerup effects, hole generation) to account for the paused duration.
+- **Persistent Settings:**
+    - **Storage Mechanism:** Using `localStorage` is standard, but need to handle potential exceptions (e.g., storage disabled, quota exceeded).
+    - **Data Structure:** Defining a clear structure to save player count and control configurations.
+    - **Loading/Saving:** Implementing logic to load settings on startup and save changes when they occur (e.g., after changing controls or player count).
+- **More Powerups:**
+    - **Design & Balance:** Defining clear effects for new powerups (Ghost Mode, Thick Trail, Clear Own Trail, Random Teleport) and ensuring they are balanced.
+    - **Implementation:** Adding new types to `PowerupType`, implementing their effects (potentially modifying `Player` state, collision logic, or `main.ts`), adding visuals, and integrating with spawning/collection.
 
 ## High-level Task Breakdown
 
@@ -241,7 +253,67 @@ This version will be built using HTML, TypeScript, and the HTML Canvas API for r
     *   Consider adding a simple fade-in effect for the `GameOver` and `SessionOver` popups by animating `ctx.globalAlpha` over a few frames.
     *   **Success Criteria:** The game has minor visual enhancements (trail glow, UI fade-in) that improve the look without significantly degrading performance.
 
-*(Further tasks like polishing, menus, sound effects etc. can be added later)*
+**--- Tasks for Persistent Settings ---**
+
+24. **Save/Load Settings:**
+    *   Define a data structure (e.g., an interface `GameSettings`) to hold the preferred player count and the array of control configurations.
+    *   Implement a `saveSettings` function in `src/settings.ts` (new file) that takes `GameSettings` and saves it to `localStorage` as a JSON string. Include basic error handling (try/catch).
+    *   Implement a `loadSettings` function in `src/settings.ts` that reads from `localStorage`, parses the JSON, and returns `GameSettings` or default values if nothing is saved or parsing fails. Include error handling.
+    *   In `main.ts`, call `loadSettings` on initialization to get the starting `playerCount` and `playerControls`.
+    *   Call `saveSettings` whenever the player count is changed or control configurations are updated in the `WaitingToStart` state.
+    *   **Success Criteria:** Game starts with previously saved player count and controls. Changes made to these settings persist after reloading the page.
+
+**--- Tasks for More Powerups ---**
+
+25. **Define New Powerup Types:**
+    *   Add new entries to the `PowerupType` enum/type in `src/powerup.ts`: `GHOST_MODE`, `THICK_TRAIL`, `CLEAR_OWN_TRAIL`, `RANDOM_TELEPORT`.
+    *   Add corresponding entries to `POWERUP_CONSTANTS` for durations, colors, symbols, etc.
+    *   Update `drawPowerup` to handle rendering the new powerup types.
+    *   **Success Criteria:** New powerup types are defined in the code with associated constants and basic drawing logic.
+
+26. **Implement New Powerup Effects & Visuals:**
+    *   **Ghost Mode:** Modify `checkCollisions` in `src/player.ts` to ignore wall and trail collisions when the effect is active. Add visual indicator (e.g., player becomes semi-transparent).
+    *   **Thick Trail:** Modify `drawTrail` in `src/player.ts` to use a larger `lineWidth` when the effect is active.
+    *   **Clear Own Trail:** Implement logic in `applyPowerupEffect` (in `main.ts`) to instantly clear the collecting player's `path` array. This is an instantaneous effect.
+    *   **Random Teleport:** Implement logic in `applyPowerupEffect` to calculate a new random safe position (similar to Task 19 logic) and update the player's position (`x`, `y`, and maybe head position). This is instantaneous.
+    *   Update `applyPowerupEffect` and `updatePlayer` to handle activating/deactivating timed effects (`GHOST_MODE`, `THICK_TRAIL`) and triggering instantaneous ones (`CLEAR_OWN_TRAIL`, `RANDOM_TELEPORT`).
+    *   Add necessary visual feedback in `drawPlayer` for new active effects.
+    *   **Success Criteria:** Collecting each new powerup triggers its intended effect (passing through walls/trails, thicker trail, cleared trail, teleport) and associated visual cues. Timed effects expire correctly.
+
+27. **Adjust Powerup Spawning/Balancing:**
+    *   Review the powerup spawning logic (`spawnPowerup` in `main.ts`).
+    *   Ensure the new powerup types are included in the random selection process.
+    *   Potentially adjust spawn rates or probabilities if needed based on initial testing (e.g., maybe teleport or clear trail should be rarer).
+    *   **Success Criteria:** New powerups appear during Arcade mode gameplay. The mix and frequency feel reasonable (subjective, may need later tuning).
+
+**--- Tasks for Pause Functionality ---**
+
+28. **Define Pause State & Input:**
+    *   Add a `Paused` state to the `GameState` type/enum in `src/main.ts`.
+    *   Modify `handleKeyDown` in `src/main.ts` to detect a specific key press (e.g., 'p') *only* when `gameState` is `Running`. If detected, change `gameState` to `Paused`.
+    *   Modify `handleKeyDown` to detect the same key press when `gameState` is `Paused`. If detected, change `gameState` back to `Running`.
+    *   **Success Criteria:** Pressing 'p' during gameplay transitions the `gameState` to `Paused` (verify via console log or debugger). Pressing 'p' again transitions back to `Running`.
+
+29. **Suspend Game Logic:**
+    *   In the main `gameLoop` function in `src/main.ts`, add a check at the beginning: if `gameState` is `Paused`, immediately `return` (or skip all update logic sections).
+    *   **Success Criteria:** When the game is paused (state is `Paused`), players, trails, and powerups stop moving/updating. Game time effectively freezes.
+
+30. **Implement Pause Visual Indicator:**
+    *   Modify `drawGameState` in `src/main.ts` to add a case for the `Paused` state.
+    *   In this case, first draw the regular game elements (players, trails, powerups, etc. - maybe by calling the drawing functions used in the 'Running' state or caching the last frame).
+    *   Then, draw a semi-transparent overlay (e.g., `ctx.fillStyle = 'rgba(0, 0, 0, 0.5)'; ctx.fillRect(...)`) covering the canvas.
+    *   Draw text like "Paused" and "Press 'P' to Resume" in the center.
+    *   **Success Criteria:** When paused, the game visuals freeze, and a clear "Paused" overlay with resume instructions is displayed.
+
+31. **Handle Timers Across Pause:**
+    *   Add variables in `main.ts` to track pause time: `pauseStartTime: number | null = null;`.
+    *   When transitioning from `Running` to `Paused`, record `pauseStartTime = performance.now();`.
+    *   When transitioning from `Paused` to `Running`:
+        *   Calculate `pausedDuration = performance.now() - pauseStartTime;`.
+        *   Iterate through all active players and add `pausedDuration` to the expiry timestamp of each effect in their `activeEffects` map.
+        *   Iterate through `activePowerups` and add `pausedDuration` to their spawn timestamp (`createdAt`) to effectively extend their lifetime.
+        *   Reset `pauseStartTime = null;`.
+    *   **Success Criteria:** Active powerup effects (like speed boost, invincibility) and the lifetime of spawned powerups correctly resume their remaining duration after unpausing, accounting for the time spent paused.
 
 ## Project Status Board
 
@@ -277,6 +349,14 @@ This version will be built using HTML, TypeScript, and the HTML Canvas API for r
 - [x] **21. Improve Typography**
 - [x] **22. Enhance UI Element Styling**
 - [ ] **23. (Optional) Add Simple Visual Polish** (Skipped by user)
+- [ ] **24. Save/Load Settings**
+- [ ] **25. Define New Powerup Types**
+- [ ] **26. Implement New Powerup Effects & Visuals**
+- [ ] **27. Adjust Powerup Spawning/Balancing**
+- [ ] **28. Define Pause State & Input**
+- [ ] **29. Suspend Game Logic**
+- [ ] **30. Implement Pause Visual Indicator**
+- [ ] **31. Handle Timers Across Pause**
 
 ## Executor's Feedback or Assistance Requests
 
@@ -349,3 +429,112 @@ This version will be built using HTML, TypeScript, and the HTML Canvas API for r
 ## Lessons
 
 *(No lessons learned yet)* 
+
+# Phase 2: Online Multiplayer (Client-Server Architecture)
+
+## Background and Motivation
+
+To allow players to compete remotely, the game needs to be extended with online multiplayer capabilities. This involves transitioning from a purely client-side architecture to a client-server model where a central server manages the game state and facilitates communication between players.
+
+## Architecture Overview
+
+-   **Model:** Client-Server.
+-   **Client (Frontend):** The existing HTML, CSS, and TypeScript code, responsible for rendering the game state received from the server and sending user input to the server. Hosted on **Netlify**.
+-   **Server (Backend):** A Node.js application using TypeScript, responsible for managing WebSocket connections, running the authoritative game simulation (receiving inputs, updating state, detecting collisions), and broadcasting state updates to connected clients. Hosted on **Fly.io**.
+-   **Communication Protocol:** WebSockets (`ws` library recommended for Node.js).
+-   **Database (Optional):** Potentially Supabase (PostgreSQL) for features like user accounts, persistent leaderboards, or advanced matchmaking, but not strictly required for the core real-time gameplay loop.
+
+## Key Challenges and Analysis
+
+-   **State Synchronization:** Ensuring all clients have a consistent and reasonably up-to-date view of the game state despite network latency.
+-   **Latency Handling:** Implementing strategies (e.g., server reconciliation, potentially client-side prediction if needed later) to mitigate the perceived effects of network delay on player movement and actions.
+-   **Server-Side Game Logic:** Refactoring the core game simulation (movement, collision, powerups, scoring) to run authoritatively on the server.
+-   **Network Code:** Efficiently serializing and deserializing game state and input messages sent over WebSockets.
+-   **Backend Deployment & Management:** Setting up, configuring (Dockerfile, `fly.toml`), deploying, and managing the Node.js application on Fly.io.
+-   **Scalability:** Designing the server logic to handle multiple simultaneous game rooms and players (Fly.io helps with scaling instances).
+-   **Security:** Basic validation of messages received from clients to prevent trivial cheating or server crashes.
+
+## High-level Task Breakdown (Phase 2)
+
+**(To be started AFTER Phase 1 tasks 24-31 are complete)**
+
+32. **Setup Backend Project (Node.js/TypeScript):**
+    *   Create a new directory for the server code (e.g., `server/`).
+    *   Initialize a Node.js project (`npm init`).
+    *   Setup TypeScript (`tsconfig.json`).
+    *   Install necessary dependencies (`typescript`, `ts-node`, `@types/node`, `ws`, `@types/ws`).
+    *   Create basic server entry point (`src/server.ts`).
+    *   **Success Criteria:** A basic Node.js/TypeScript project structure is created for the backend server.
+
+33. **Implement Basic WebSocket Server:**
+    *   In `server.ts`, use the `ws` library to create a WebSocket server.
+    *   Handle basic connection events (`connection`, `message`, `close`, `error`).
+    *   Log messages when clients connect and disconnect.
+    *   **Success Criteria:** The Node.js server starts, listens for WebSocket connections, and logs client connection/disconnection events.
+
+34. **Setup Fly.io App & Deployment:**
+    *   Install `flyctl` CLI.
+    *   Run `fly launch` within the `server/` directory to generate initial configuration (`fly.toml`, `Dockerfile`).
+    *   Review and potentially adjust the `Dockerfile` (ensure correct Node version, `npm install`, build steps) and `fly.toml` (port configuration, health checks).
+    *   Perform an initial deployment using `fly deploy`.
+    *   **Success Criteria:** The basic WebSocket server is successfully deployed to Fly.io and is reachable (can be tested with a simple WebSocket client tool).
+
+35. **Refactor Core Game Logic for Server:**
+    *   Identify core game logic components from the client-side code (`player.ts`, `powerup.ts`, `config.ts`, parts of `main.ts` like collision checks, state updates) that need to run on the server.
+    *   Copy/adapt these modules into the `server/src/` directory.
+    *   Modify them to remove client-specific rendering logic and dependencies (e.g., canvas context).
+    *   Create server-side representations of game entities (Players, Powerups) and game state.
+    *   **Success Criteria:** Core game types, constants, and simulation logic (movement update, collision detection) exist and can be run within the Node.js server environment.
+
+36. **Define Network Messages:**
+    *   Define TypeScript interfaces for messages exchanged between client and server (e.g., `ClientInputMessage`, `ServerGameStateUpdate`, `PlayerJoin`, `GameStart`, `GameOver`, etc.).
+    *   Include message types/identifiers to distinguish different kinds of messages.
+    *   **Success Criteria:** Clear data structures are defined for all necessary client-server communication.
+
+37. **Implement Server-Side Game Management:**
+    *   Create logic on the server to manage game "rooms" or sessions.
+    *   Handle players joining/leaving rooms.
+    *   Implement the main server game loop: process inputs from clients in a room, update the authoritative game state for that room, check for collisions/wins.
+    *   Periodically broadcast the relevant game state updates (using the defined messages) to all clients in a room.
+    *   **Success Criteria:** Server can manage multiple game instances, process inputs, run the simulation, and broadcast state updates via WebSockets.
+
+38. **Implement Client-Side Networking:**
+    *   Modify the client-side code (`main.ts`) to establish a WebSocket connection to the deployed Fly.io server URL.
+    *   Implement sending player input (key presses) to the server using the defined messages.
+    *   Implement handling incoming game state updates from the server.
+    *   Modify the client's rendering logic (`gameLoop`, `drawPlayer`, etc.) to display the state received from the server, instead of running its own simulation.
+    *   **Success Criteria:** Client connects to the server, sends inputs, receives state updates, and renders the game based on server data. Multiple clients can connect and see each other move based on server updates.
+
+39. **Implement Basic Matchmaking/Lobby:**
+    *   (Server-side) Implement a simple system for players to find or create game rooms (e.g., join first available room, create new if none).
+    *   (Client-side) Add basic UI elements for connecting and joining a game.
+    *   **Success Criteria:** Players can successfully join a game session with other online players.
+
+40. **Refine Synchronization & Latency Handling (Initial Pass):**
+    *   Test gameplay with simulated or real network latency.
+    *   Make initial adjustments to state update frequency or structure to improve perceived smoothness.
+    *   (Advanced - Optional for later) Consider basic client-side prediction and server reconciliation if needed.
+    *   **Success Criteria:** Online gameplay feels reasonably responsive and consistent across different clients.
+
+**(Further tasks: Database integration for accounts/leaderboards, advanced matchmaking, cheat prevention, etc.)**
+
+## Project Status Board
+
+**--- Phase 1: Local Multiplayer & Enhancements ---**
+
+// ... existing Phase 1 tasks ...
+- [ ] **31. Handle Timers Across Pause**
+
+**--- Phase 2: Online Multiplayer ---**
+
+- [ ] **32. Setup Backend Project (Node.js/TypeScript)**
+- [ ] **33. Implement Basic WebSocket Server**
+- [ ] **34. Setup Fly.io App & Deployment**
+- [ ] **35. Refactor Core Game Logic for Server**
+- [ ] **36. Define Network Messages**
+- [ ] **37. Implement Server-Side Game Management**
+- [ ] **38. Implement Client-Side Networking**
+- [ ] **39. Implement Basic Matchmaking/Lobby**
+- [ ] **40. Refine Synchronization & Latency Handling (Initial Pass)**
+
+## Executor's Feedback or Assistance Requests 

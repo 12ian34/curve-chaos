@@ -27,6 +27,10 @@ The first player to reach 30 points with a lead of at least 2 points wins the se
 
 ## features
 
+--
+check .cursor/scratchpad.md for full planning and requirements doc, including future todos
+--
+
 *   **Multiplayer:** Supports 1-4 local players.
 *   **Classic Mode:** Standard gameplay - avoid walls and trails.
 *   **Arcade Mode:** Classic gameplay with added power-ups:
